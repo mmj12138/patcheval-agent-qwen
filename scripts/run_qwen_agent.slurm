@@ -51,7 +51,7 @@ if torch.cuda.is_available():
 PY
 
 # 运行 agent 生成 patch
-python src/pipeline.py
+bash scripts/run.sh
 
 echo "Output saved to outputs/patches.json"
 echo "Job finished at $(date)"

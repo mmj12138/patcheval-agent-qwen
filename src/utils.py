@@ -41,7 +41,7 @@ def is_valid_unified_diff(patch, file_path):
     if "@@" not in patch:
         return False
 
-    # 禁止 ed diff 格式，比如 2361c2361 / 532a532
+    # no ed diff. eg. 2361c2361 / 532a532
     if re.search(r"^\d+[acd]\d+", patch, flags=re.MULTILINE):
         return False
 

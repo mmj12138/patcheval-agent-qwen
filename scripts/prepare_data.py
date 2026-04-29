@@ -27,7 +27,7 @@ def load_json(path: Path):
 
 
 def normalize_sample(sample):
-    # 不把 fix_func / vul_patch 喂给模型，避免答案泄露
+    # no fix_func / vul_patch
     return {k: sample.get(k) for k in SAFE_FIELDS if k in sample}
 
 
