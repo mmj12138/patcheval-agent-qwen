@@ -1,0 +1,67 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+dist/
+build/
+
+# Virtual env
+venv/
+.venv/
+env/
+
+# =========================
+# OS / Editor
+# =========================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# =========================
+# Logs
+# =========================
+*.log
+
+# =========================
+# Environment variables
+# =========================
+.env
+.env.*
+
+# =========================
+# Model / HuggingFace cache
+# =========================
+.cache/
+.huggingface/
+hf_cache/
+**/huggingface/
+**/transformers/
+
+# =========================
+# Outputs（重要）
+# =========================
+outputs/
+data/processed/
+
+# =========================
+# Raw datasets（可选）
+# =========================
+data/raw/
+
+# =========================
+# PatchEval repo（如果你clone在本地）
+# =========================
+PatchEval/
+
+# =========================
+# Temporary files
+# =========================
+tmp/
+temp/
+*.tmp
