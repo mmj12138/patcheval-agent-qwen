@@ -27,7 +27,7 @@ python -m src.pipeline \
 
 echo "===== STATIC TOOL ====="
 python -m src.pipeline \
-  --agent static_tool \
+  --agent cwe_tool \
   --input "${INPUT_FILE}" \
   --output outputs/static_tool_7b_patches.json
 
