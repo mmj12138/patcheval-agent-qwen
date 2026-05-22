@@ -1,0 +1,780 @@
+[
+  {
+    "cve_id": "CVE-2020-7795",
+    "cwe_id": [
+      "CWE-94",
+      "CWE-77",
+      "CWE-78"
+    ],
+    "cve_description": "The package get-npm-package-version before 1.0.7 are vulnerable to Command Injection via main function in index.js.",
+    "cwe_info": {
+      "CWE-94": {
+        "name": "Improper Control of Generation of Code ('Code Injection')",
+        "description": "The product constructs all or part of a code segment using externally-influenced input from an upstream component, but it does not neutralize or incorrectly neutralizes special elements that could modify the syntax or behavior of the intended code segment."
+      },
+      "CWE-77": {
+        "name": "Improper Neutralization of Special Elements used in a Command ('Command Injection')",
+        "description": "The product constructs all or part of a command using externally-influenced input from an upstream component, but it does not neutralize or incorrectly neutralizes special elements that could modify the intended command when it is sent to a downstream component."
+      },
+      "CWE-78": {
+        "name": "Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')",
+        "description": "The product constructs all or part of an OS command using externally-influenced input from an upstream component, but it does not neutralize or incorrectly neutralizes special elements that could modify the intended OS command when it is sent to a downstream component."
+      }
+    },
+    "repo": "https://github.com/hoperyy/get-npm-package-version",
+    "patch_url": [
+      "https://github.com/hoperyy/get-npm-package-version/commit/40b1cf31a0607ea66f9e30a0c3af1383b52b2dec",
+      "https://github.com/hoperyy/get-npm-package-version/commit/49459d4a3ce68587d48ffa8dead86fc9ed58e965"
+    ],
+    "programming_language": "JavaScript",
+    "vul_func": [
+      {
+        "id": "vul_js_16_1",
+        "commit": "5279786",
+        "file_path": "index.js",
+        "start_line": 1,
+        "end_line": 28,
+        "snippet": "module.exports = function (packageName, { registry = '', timeout = null } = {}) {\n    try {\n        let version;\n\n        const config = {\n            stdio: ['pipe', 'pipe', 'ignore']\n        };\n\n        if (timeout) {\n            config.timeout = timeout;\n        }\n\n        if (registry) {\n            version = require('child_process').execSync(`npm view ${packageName} version --registry ${registry}`, config);\n        } else {\n            version = require('child_process').execSync(`npm view ${packageName} version`, config);\n        }\n\n        if (version) {\n            return version.toString().trim().replace(/^\\n*/, '').replace(/\\n*$/, '');\n        } else {\n            return null;\n        }\n\n    } catch(err) {\n        return null;\n    }\n}",
+        "vul_localization": [
+          {
+            "patch_lines": [
+              2
+            ],
+            "tag": "add"
+          }
+        ]
+      }
+    ],
+    "fix_func": [
+      {
+        "id": "fix_js_16_1",
+        "commit": "40b1cf3",
+        "file_path": "index.js",
+        "start_line": 1,
+        "end_line": 31,
+        "snippet": "module.exports = function (packageName, { registry = '', timeout = null } = {}) {\n    try {\n        if (/[`$&{}[;|]/g.test(packageName) || /[`$&{}[;|]/g.test(registry)) {\n            return null\n        }\n        let version;\n\n        const config = {\n            stdio: ['pipe', 'pipe', 'ignore']\n        };\n\n        if (timeout) {\n            config.timeout = timeout;\n        }\n\n        if (registry) {\n            version = require('child_process').execSync(`npm view ${packageName} version --registry ${registry}`, config);\n        } else {\n            version = require('child_process').execSync(`npm view ${packageName} version`, config);\n        }\n\n        if (version) {\n            return version.toString().trim().replace(/^\\n*/, '').replace(/\\n*$/, '');\n        } else {\n            return null;\n        }\n\n    } catch(err) {\n        return null;\n    }\n}"
+      }
+    ],
+    "one_shot": "# Vulnerable Function\n### function vul_js_242_1\nvulnerable code:\nasync function getLatestVersions(name) {\n  const { stdout } = await execAsync(`npm view ${name} versions --json`);\n  try {\n    return JSON.parse(stdout);\n  } catch (err) {\n    throw new Error(`Failed to parse output from NPM view - ${err.toString()}`);\n  }\n}\n\n### function vul_js_242_2\nvulnerable code:\nasync function getLatestTag(name) {\n  try {\n    const { stdout } = await execAsync(`npm view ${name} dist-tags --json`);\n    const { latest } = JSON.parse(stdout);\n    return latest;\n  } catch (err) {\n    throw new Error(`Failed to parse output from NPM view - ${err.toString()}`);\n  }\n}\n\n# Fixed Code\n```json\n[\n  {\n        \"id\": \"vul_js_242_1\",\n        \"patch\": \"async function getLatestVersions(name) {\\n  isValidNpmPackageName(name);\\n  const { stdout } = await execAsync(`npm view ${name} versions --json`);\\n  try {\\n    return JSON.parse(stdout);\\n  } catch (err) {\\n    throw new Error(`Failed to parse output from NPM view - ${err.toString()}`);\\n  }\\n}\"\n    },\n  {\n        \"id\": \"vul_js_242_2\",\n        \"patch\": \"async function getLatestTag(name) {\\n  isValidNpmPackageName(name);\\n  try {\\n    const { stdout } = await execAsync(`npm view ${name} dist-tags --json`);\\n    const { latest } = JSON.parse(stdout);\\n    return latest;\\n  } catch (err) {\\n    throw new Error(`Failed to parse output from NPM view - ${err.toString()}`);\\n  }\\n}\"\n    }\n]\n",
+    "one_shot_cot": "# Vulnerable Function\n### function vul_js_242_1\nvulnerable code:\nasync function getLatestVersions(name) {\n  const { stdout } = await execAsync(`npm view ${name} versions --json`);\n  try {\n    return JSON.parse(stdout);\n  } catch (err) {\n    throw new Error(`Failed to parse output from NPM view - ${err.toString()}`);\n  }\n}\n\n### function vul_js_242_2\nvulnerable code:\nasync function getLatestTag(name) {\n  try {\n    const { stdout } = await execAsync(`npm view ${name} dist-tags --json`);\n    const { latest } = JSON.parse(stdout);\n    return latest;\n  } catch (err) {\n    throw new Error(`Failed to parse output from NPM view - ${err.toString()}`);\n  }\n}\n# Root Cause Analysis\nFunction: vul_js_242_1\nRoot cause analysis: The vulnerability exists due to direct interpolation of user-controlled input (name parameter) into a shell command without proper sanitization. This allows an attacker to inject arbitrary commands by crafting a malicious package name.\n\nFunction: vul_js_242_2 \nRoot cause analysis: Similar to vul_js_242_1, this function directly interpolates the name parameter into a shell command without sanitization, making it vulnerable to command injection attacks.\n\n# Fix Step\nFunction: vul_js_242_1\nFix steps:\n1. Replace direct command interpolation with parameterized execution\n2. Use child_process.spawn instead of execAsync to avoid shell interpretation\n3. Pass arguments as an array to prevent command injection\n4. Maintain the same error handling behavior\n\nFunction: vul_js_242_2\nFix steps:\n1. Replace direct command interpolation with parameterized execution\n2. Use child_process.spawn instead of execAsync to avoid shell interpretation\n3. Pass arguments as an array to prevent command injection\n4. Maintain the same error handling behavior\n\n# Fixed Code\n```json\n[\n  {\n        \"id\": \"vul_js_242_1\",\n        \"patch\": \"async function getLatestVersions(name) {\\n  isValidNpmPackageName(name);\\n  const { stdout } = await execAsync(`npm view ${name} versions --json`);\\n  try {\\n    return JSON.parse(stdout);\\n  } catch (err) {\\n    throw new Error(`Failed to parse output from NPM view - ${err.toString()}`);\\n  }\\n}\"\n    },\n  {\n        \"id\": \"vul_js_242_2\",\n        \"patch\": \"async function getLatestTag(name) {\\n  isValidNpmPackageName(name);\\n  try {\\n    const { stdout } = await execAsync(`npm view ${name} dist-tags --json`);\\n    const { latest } = JSON.parse(stdout);\\n    return latest;\\n  } catch (err) {\\n    throw new Error(`Failed to parse output from NPM view - ${err.toString()}`);\\n  }\\n}\"\n    }\n]",
+    "modification": {
+      "hunk_count": 1,
+      "line_count": 3,
+      "file_count": 1
+    },
+    "is_poc": true
+  },
+  {
+    "cve_id": "CVE-2025-43859",
+    "cwe_id": [
+      "CWE-444"
+    ],
+    "cve_description": "h11 is a Python implementation of HTTP/1.1. Prior to version 0.16.0, a leniency in h11's parsing of line terminators in chunked-coding message bodies can lead to request smuggling vulnerabilities under certain conditions. This issue has been patched in version 0.16.0. Since exploitation requires the combination of buggy h11 with a buggy (reverse) proxy, fixing either component is sufficient to mitigate this issue.",
+    "cwe_info": {
+      "CWE-444": {
+        "name": "Inconsistent Interpretation of HTTP Requests ('HTTP Request/Response Smuggling')",
+        "description": "The product acts as an intermediary HTTP agent\n         (such as a proxy or firewall) in the data flow between two\n         entities such as a client and server, but it does not\n         interpret malformed HTTP requests or responses in ways that\n         are consistent with how the messages will be processed by\n         those entities that are at the ultimate destination."
+      }
+    },
+    "repo": "https://github.com/python-hyper/h11",
+    "patch_url": [
+      "https://github.com/python-hyper/h11/commit/114803a29ce50116dc47951c690ad4892b1a36ed"
+    ],
+    "programming_language": "Python",
+    "vul_func": [
+      {
+        "id": "vul_py_68_1",
+        "commit": "9462006f6ce4941661888228cbd4ac1ea80689b0",
+        "file_path": "h11/_readers.py",
+        "start_line": 149,
+        "end_line": 155,
+        "snippet": "    def __init__(self) -> None:\n        self._bytes_in_chunk = 0\n        # After reading a chunk, we have to throw away the trailing \\r\\n.\n        # This tracks the bytes that we need to match and throw away.\n        # de-chunkification.\n        self._bytes_to_discard = 0\n        self._reading_trailer = False",
+        "vul_localization": [
+          {
+            "patch_lines": [
+              6
+            ],
+            "tag": "modify"
+          }
+        ]
+      },
+      {
+        "id": "vul_py_68_2",
+        "commit": "9462006f6ce4941661888228cbd4ac1ea80689b0",
+        "file_path": "h11/_readers.py",
+        "start_line": 157,
+        "end_line": 201,
+        "snippet": "    def __call__(self, buf: ReceiveBuffer) -> Union[Data, EndOfMessage, None]:\n        if self._reading_trailer:\n            lines = buf.maybe_extract_lines()\n            if lines is None:\n                return None\n            return EndOfMessage(headers=list(_decode_header_lines(lines)))\n        if self._bytes_to_discard >0 :\n            data = buf.maybe_extract_at_most(self._bytes_to_discard)\n            if data is None:\n                return None\n            self._bytes_to_discard -= len(data)\n            if self._bytes_to_discard > 0:\n                return None\n            # else, fall through and read some more\n        assert self._bytes_to_discard == 0\n        if self._bytes_in_chunk == 0:\n            # We need to refill our chunk count\n            chunk_header = buf.maybe_extract_next_line()\n            if chunk_header is None:\n                return None\n            matches = validate(\n                chunk_header_re,\n                chunk_header,\n                \"illegal chunk header: {!r}\",\n                chunk_header,\n            )\n            # XX FIXME: we discard chunk extensions. Does anyone care?\n            self._bytes_in_chunk = int(matches[\"chunk_size\"], base=16)\n            if self._bytes_in_chunk == 0:\n                self._reading_trailer = True\n                return self(buf)\n            chunk_start = True\n        else:\n            chunk_start = False\n        assert self._bytes_in_chunk > 0\n        data = buf.maybe_extract_at_most(self._bytes_in_chunk)\n        if data is None:\n            return None\n        self._bytes_in_chunk -= len(data)\n        if self._bytes_in_chunk == 0:\n            self._bytes_to_discard = 2\n            chunk_end = True\n        else:\n            chunk_end = False\n        return Data(data=data, chunk_start=chunk_start, chunk_end=chunk_end)",
+        "vul_localization": [
+          {
+            "patch_lines": [
+              7,
+              8
+            ],
+            "tag": "modify"
+          },
+          {
+            "patch_lines": [
+              11,
+              12
+            ],
+            "tag": "modify"
+          },
+          {
+            "patch_lines": [
+              16
+            ],
+            "tag": "modify"
+          },
+          {
+            "patch_lines": [
+              42
+            ],
+            "tag": "modify"
+          }
+        ]
+      }
+    ],
+    "fix_func": [
+      {
+        "id": "fix_py_68_1",
+        "commit": "114803a29ce50116dc47951c690ad4892b1a36ed",
+        "file_path": "h11/_readers.py",
+        "start_line": 149,
+        "end_line": 154,
+        "snippet": "    def __init__(self) -> None:\n        self._bytes_in_chunk = 0\n        # After reading a chunk, we have to throw away the trailing \\r\\n.\n        # This tracks the bytes that we need to match and throw away.\n        self._bytes_to_discard = b\"\"\n        self._reading_trailer = False"
+      },
+      {
+        "id": "fix_py_68_2",
+        "commit": "114803a29ce50116dc47951c690ad4892b1a36ed",
+        "file_path": "h11/_readers.py",
+        "start_line": 156,
+        "end_line": 204,
+        "snippet": "    def __call__(self, buf: ReceiveBuffer) -> Union[Data, EndOfMessage, None]:\n        if self._reading_trailer:\n            lines = buf.maybe_extract_lines()\n            if lines is None:\n                return None\n            return EndOfMessage(headers=list(_decode_header_lines(lines)))\n        if self._bytes_to_discard:\n            data = buf.maybe_extract_at_most(len(self._bytes_to_discard))\n            if data is None:\n                return None\n            if data != self._bytes_to_discard[:len(data)]:\n                raise LocalProtocolError(\n                    f\"malformed chunk footer: {data!r} (expected {self._bytes_to_discard!r})\"\n                )\n            self._bytes_to_discard = self._bytes_to_discard[len(data):]\n            if self._bytes_to_discard:\n                return None\n            # else, fall through and read some more\n        assert self._bytes_to_discard == b\"\"\n        if self._bytes_in_chunk == 0:\n            # We need to refill our chunk count\n            chunk_header = buf.maybe_extract_next_line()\n            if chunk_header is None:\n                return None\n            matches = validate(\n                chunk_header_re,\n                chunk_header,\n                \"illegal chunk header: {!r}\",\n                chunk_header,\n            )\n            # XX FIXME: we discard chunk extensions. Does anyone care?\n            self._bytes_in_chunk = int(matches[\"chunk_size\"], base=16)\n            if self._bytes_in_chunk == 0:\n                self._reading_trailer = True\n                return self(buf)\n            chunk_start = True\n        else:\n            chunk_start = False\n        assert self._bytes_in_chunk > 0\n        data = buf.maybe_extract_at_most(self._bytes_in_chunk)\n        if data is None:\n            return None\n        self._bytes_in_chunk -= len(data)\n        if self._bytes_in_chunk == 0:\n            self._bytes_to_discard = b\"\\r\\n\"\n            chunk_end = True\n        else:\n            chunk_end = False\n        return Data(data=data, chunk_start=chunk_start, chunk_end=chunk_end)"
+      }
+    ],
+    "one_shot": "# Vulnerable Function\n### function vul_py_76\nvulnerable code:\n    def parse_header(self, header_plus):\n        \"\"\"\n        Parses the header_plus block of text (the headers plus the\n        first line of the request).\n        \"\"\"\n        index = header_plus.find(b\"\\r\\n\")\n        if index >= 0:\n            first_line = header_plus[:index].rstrip()\n            header = header_plus[index + 2 :]\n        else:\n            raise ParsingError(\"HTTP message header invalid\")\n\n        if b\"\\r\" in first_line or b\"\\n\" in first_line:\n            raise ParsingError(\"Bare CR or LF found in HTTP message\")\n\n        self.first_line = first_line  # for testing\n\n        lines = get_header_lines(header)\n\n        headers = self.headers\n        for line in lines:\n            index = line.find(b\":\")\n            if index > 0:\n                key = line[:index]\n\n                if key != key.strip():\n                    raise ParsingError(\"Invalid whitespace after field-name\")\n\n                if b\"_\" in key:\n                    continue\n                value = line[index + 1 :].strip()\n                key1 = tostr(key.upper().replace(b\"-\", b\"_\"))\n                # If a header already exists, we append subsequent values\n                # seperated by a comma. Applications already need to handle\n                # the comma seperated values, as HTTP front ends might do\n                # the concatenation for you (behavior specified in RFC2616).\n                try:\n                    headers[key1] += tostr(b\", \" + value)\n                except KeyError:\n                    headers[key1] = tostr(value)\n            # else there's garbage in the headers?\n\n        # command, uri, version will be bytes\n        command, uri, version = crack_first_line(first_line)\n        version = tostr(version)\n        command = tostr(command)\n        self.command = command\n        self.version = version\n        (\n            self.proxy_scheme,\n            self.proxy_netloc,\n            self.path,\n            self.query,\n            self.fragment,\n        ) = split_uri(uri)\n        self.url_scheme = self.adj.url_scheme\n        connection = headers.get(\"CONNECTION\", \"\")\n\n        if version == \"1.0\":\n            if connection.lower() != \"keep-alive\":\n                self.connection_close = True\n\n        if version == \"1.1\":\n            # since the server buffers data from chunked transfers and clients\n            # never need to deal with chunked requests, downstream clients\n            # should not see the HTTP_TRANSFER_ENCODING header; we pop it\n            # here\n            te = headers.pop(\"TRANSFER_ENCODING\", \"\")\n            if te.lower() == \"chunked\":\n                self.chunked = True\n                buf = OverflowableBuffer(self.adj.inbuf_overflow)\n                self.body_rcv = ChunkedReceiver(buf)\n            expect = headers.get(\"EXPECT\", \"\").lower()\n            self.expect_continue = expect == \"100-continue\"\n            if connection.lower() == \"close\":\n                self.connection_close = True\n\n        if not self.chunked:\n            try:\n                cl = int(headers.get(\"CONTENT_LENGTH\", 0))\n            except ValueError:\n                cl = 0\n            self.content_length = cl\n            if cl > 0:\n                buf = OverflowableBuffer(self.adj.inbuf_overflow)\n                self.body_rcv = FixedStreamReceiver(cl, buf)\n\n# Fixed Code\n```json\n[\n  {\n        \"id\": \"vul_py_76\",\n        \"patch\": \"    def parse_header(self, header_plus):\\n        \\\"\\\"\\\"\\n        Parses the header_plus block of text (the headers plus the\\n        first line of the request).\\n        \\\"\\\"\\\"\\n        index = header_plus.find(b\\\"\\\\r\\\\n\\\")\\n        if index >= 0:\\n            first_line = header_plus[:index].rstrip()\\n            header = header_plus[index + 2 :]\\n        else:\\n            raise ParsingError(\\\"HTTP message header invalid\\\")\\n\\n        if b\\\"\\\\r\\\" in first_line or b\\\"\\\\n\\\" in first_line:\\n            raise ParsingError(\\\"Bare CR or LF found in HTTP message\\\")\\n\\n        self.first_line = first_line  # for testing\\n\\n        lines = get_header_lines(header)\\n\\n        headers = self.headers\\n        for line in lines:\\n            index = line.find(b\\\":\\\")\\n            if index > 0:\\n                key = line[:index]\\n\\n                if key != key.strip():\\n                    raise ParsingError(\\\"Invalid whitespace after field-name\\\")\\n\\n                if b\\\"_\\\" in key:\\n                    continue\\n                value = line[index + 1 :].strip()\\n                key1 = tostr(key.upper().replace(b\\\"-\\\", b\\\"_\\\"))\\n                # If a header already exists, we append subsequent values\\n                # seperated by a comma. Applications already need to handle\\n                # the comma seperated values, as HTTP front ends might do\\n                # the concatenation for you (behavior specified in RFC2616).\\n                try:\\n                    headers[key1] += tostr(b\\\", \\\" + value)\\n                except KeyError:\\n                    headers[key1] = tostr(value)\\n            # else there's garbage in the headers?\\n\\n        # command, uri, version will be bytes\\n        command, uri, version = crack_first_line(first_line)\\n        version = tostr(version)\\n        command = tostr(command)\\n        self.command = command\\n        self.version = version\\n        (\\n            self.proxy_scheme,\\n            self.proxy_netloc,\\n            self.path,\\n            self.query,\\n            self.fragment,\\n        ) = split_uri(uri)\\n        self.url_scheme = self.adj.url_scheme\\n        connection = headers.get(\\\"CONNECTION\\\", \\\"\\\")\\n\\n        if version == \\\"1.0\\\":\\n            if connection.lower() != \\\"keep-alive\\\":\\n                self.connection_close = True\\n\\n        if version == \\\"1.1\\\":\\n            # since the server buffers data from chunked transfers and clients\\n            # never need to deal with chunked requests, downstream clients\\n            # should not see the HTTP_TRANSFER_ENCODING header; we pop it\\n            # here\\n            te = headers.pop(\\\"TRANSFER_ENCODING\\\", \\\"\\\")\\n            if te.lower() == \\\"chunked\\\":\\n                self.chunked = True\\n                buf = OverflowableBuffer(self.adj.inbuf_overflow)\\n                self.body_rcv = ChunkedReceiver(buf)\\n            expect = headers.get(\\\"EXPECT\\\", \\\"\\\").lower()\\n            self.expect_continue = expect == \\\"100-continue\\\"\\n            if connection.lower() == \\\"close\\\":\\n                self.connection_close = True\\n\\n        if not self.chunked:\\n            try:\\n                cl = int(headers.get(\\\"CONTENT_LENGTH\\\", 0))\\n            except ValueError:\\n                raise ParsingError(\\\"Content-Length is invalid\\\")\\n\\n            self.content_length = cl\\n            if cl > 0:\\n                buf = OverflowableBuffer(self.adj.inbuf_overflow)\\n                self.body_rcv = FixedStreamReceiver(cl, buf)\"\n    }\n]\n",
+    "one_shot_cot": "# Vulnerable Function\n### function vul_py_396\nvulnerable code:\n    def parse_header(self, header_plus):\n        \"\"\"\n        Parses the header_plus block of text (the headers plus the\n        first line of the request).\n        \"\"\"\n        index = header_plus.find(b\"\\r\\n\")\n        if index >= 0:\n            first_line = header_plus[:index].rstrip()\n            header = header_plus[index + 2 :]\n        else:\n            raise ParsingError(\"HTTP message header invalid\")\n\n        if b\"\\r\" in first_line or b\"\\n\" in first_line:\n            raise ParsingError(\"Bare CR or LF found in HTTP message\")\n\n        self.first_line = first_line  # for testing\n\n        lines = get_header_lines(header)\n\n        headers = self.headers\n        for line in lines:\n            index = line.find(b\":\")\n            if index > 0:\n                key = line[:index]\n\n                if key != key.strip():\n                    raise ParsingError(\"Invalid whitespace after field-name\")\n\n                if b\"_\" in key:\n                    continue\n                value = line[index + 1 :].strip()\n                key1 = tostr(key.upper().replace(b\"-\", b\"_\"))\n                # If a header already exists, we append subsequent values\n                # seperated by a comma. Applications already need to handle\n                # the comma seperated values, as HTTP front ends might do\n                # the concatenation for you (behavior specified in RFC2616).\n                try:\n                    headers[key1] += tostr(b\", \" + value)\n                except KeyError:\n                    headers[key1] = tostr(value)\n            # else there's garbage in the headers?\n\n        # command, uri, version will be bytes\n        command, uri, version = crack_first_line(first_line)\n        version = tostr(version)\n        command = tostr(command)\n        self.command = command\n        self.version = version\n        (\n            self.proxy_scheme,\n            self.proxy_netloc,\n            self.path,\n            self.query,\n            self.fragment,\n        ) = split_uri(uri)\n        self.url_scheme = self.adj.url_scheme\n        connection = headers.get(\"CONNECTION\", \"\")\n\n        if version == \"1.0\":\n            if connection.lower() != \"keep-alive\":\n                self.connection_close = True\n\n        if version == \"1.1\":\n            # since the server buffers data from chunked transfers and clients\n            # never need to deal with chunked requests, downstream clients\n            # should not see the HTTP_TRANSFER_ENCODING header; we pop it\n            # here\n            te = headers.pop(\"TRANSFER_ENCODING\", \"\")\n            if te.lower() == \"chunked\":\n                self.chunked = True\n                buf = OverflowableBuffer(self.adj.inbuf_overflow)\n                self.body_rcv = ChunkedReceiver(buf)\n            expect = headers.get(\"EXPECT\", \"\").lower()\n            self.expect_continue = expect == \"100-continue\"\n            if connection.lower() == \"close\":\n                self.connection_close = True\n\n        if not self.chunked:\n            try:\n                cl = int(headers.get(\"CONTENT_LENGTH\", 0))\n            except ValueError:\n                cl = 0\n            self.content_length = cl\n            if cl > 0:\n                buf = OverflowableBuffer(self.adj.inbuf_overflow)\n                self.body_rcv = FixedStreamReceiver(cl, buf)\nHere's the complete analysis and fix for the HTTP request smuggling vulnerability in Waitress:\n\n# Root Cause Analysis\nFunction: vul_py_396\nRoot cause analysis:\n1. The vulnerability occurs in the parse_header function when processing HTTP headers\n2. The function improperly handles duplicate Content-Length headers by:\n   - Allowing header folding (combining duplicate headers with commas)\n   - Attempting to convert the combined value to an integer\n   - Defaulting to 0 when the conversion fails\n3. This behavior violates RFC 7230 section 3.3.2 which states that:\n   - A sender MUST NOT generate multiple Content-Length header fields\n   - A recipient MUST either reject the message or replace all but one value\n\n# Fix Plan\nFunction: vul_py_396\nFix steps:\n1. Add validation to reject requests with multiple Content-Length headers\n2. Before processing headers, check for duplicate Content-Length headers\n3. If duplicates are found, raise a ParsingError to reject the malformed request\n4. Maintain all existing functionality for valid requests\n5. Keep the same error handling style as the existing code\n\n# Fixed Code\n```json\n[\n  {\n        \"id\": \"vul_py_396\",\n        \"patch\": \"    def parse_header(self, header_plus):\\n        \\\"\\\"\\\"\\n        Parses the header_plus block of text (the headers plus the\\n        first line of the request).\\n        \\\"\\\"\\\"\\n        index = header_plus.find(b\\\"\\\\r\\\\n\\\")\\n        if index >= 0:\\n            first_line = header_plus[:index].rstrip()\\n            header = header_plus[index + 2 :]\\n        else:\\n            raise ParsingError(\\\"HTTP message header invalid\\\")\\n\\n        if b\\\"\\\\r\\\" in first_line or b\\\"\\\\n\\\" in first_line:\\n            raise ParsingError(\\\"Bare CR or LF found in HTTP message\\\")\\n\\n        self.first_line = first_line  # for testing\\n\\n        lines = get_header_lines(header)\\n\\n        headers = self.headers\\n        for line in lines:\\n            index = line.find(b\\\":\\\")\\n            if index > 0:\\n                key = line[:index]\\n\\n                if key != key.strip():\\n                    raise ParsingError(\\\"Invalid whitespace after field-name\\\")\\n\\n                if b\\\"_\\\" in key:\\n                    continue\\n                value = line[index + 1 :].strip()\\n                key1 = tostr(key.upper().replace(b\\\"-\\\", b\\\"_\\\"))\\n                # If a header already exists, we append subsequent values\\n                # seperated by a comma. Applications already need to handle\\n                # the comma seperated values, as HTTP front ends might do\\n                # the concatenation for you (behavior specified in RFC2616).\\n                try:\\n                    headers[key1] += tostr(b\\\", \\\" + value)\\n                except KeyError:\\n                    headers[key1] = tostr(value)\\n            # else there's garbage in the headers?\\n\\n        # command, uri, version will be bytes\\n        command, uri, version = crack_first_line(first_line)\\n        version = tostr(version)\\n        command = tostr(command)\\n        self.command = command\\n        self.version = version\\n        (\\n            self.proxy_scheme,\\n            self.proxy_netloc,\\n            self.path,\\n            self.query,\\n            self.fragment,\\n        ) = split_uri(uri)\\n        self.url_scheme = self.adj.url_scheme\\n        connection = headers.get(\\\"CONNECTION\\\", \\\"\\\")\\n\\n        if version == \\\"1.0\\\":\\n            if connection.lower() != \\\"keep-alive\\\":\\n                self.connection_close = True\\n\\n        if version == \\\"1.1\\\":\\n            # since the server buffers data from chunked transfers and clients\\n            # never need to deal with chunked requests, downstream clients\\n            # should not see the HTTP_TRANSFER_ENCODING header; we pop it\\n            # here\\n            te = headers.pop(\\\"TRANSFER_ENCODING\\\", \\\"\\\")\\n            if te.lower() == \\\"chunked\\\":\\n                self.chunked = True\\n                buf = OverflowableBuffer(self.adj.inbuf_overflow)\\n                self.body_rcv = ChunkedReceiver(buf)\\n            expect = headers.get(\\\"EXPECT\\\", \\\"\\\").lower()\\n            self.expect_continue = expect == \\\"100-continue\\\"\\n            if connection.lower() == \\\"close\\\":\\n                self.connection_close = True\\n\\n        if not self.chunked:\\n            try:\\n                cl = int(headers.get(\\\"CONTENT_LENGTH\\\", 0))\\n            except ValueError:\\n                raise ParsingError(\\\"Content-Length is invalid\\\")\\n\\n            self.content_length = cl\\n            if cl > 0:\\n                buf = OverflowableBuffer(self.adj.inbuf_overflow)\\n                self.body_rcv = FixedStreamReceiver(cl, buf)\"\n    }\n]",
+    "modification": {
+      "hunk_count": 3,
+      "line_count": 25,
+      "file_count": 1
+    },
+    "is_poc": true
+  },
+  {
+    "cve_id": "CVE-2022-31145",
+    "cwe_id": [
+      "CWE-613"
+    ],
+    "cve_description": "FlyteAdmin is the control plane for Flyte responsible for managing entities and administering workflow executions. In versions 1.1.30 and prior, authenticated users using an external identity provider can continue to use Access Tokens and ID Tokens even after they expire. Users who use FlyteAdmin as the OAuth2 Authorization Server are unaffected by this issue. A patch is available on the `master` branch of the repository. As a workaround, rotating signing keys immediately will invalidate all open sessions and force all users to attempt to obtain new tokens. Those who use this workaround should continue to rotate keys until FlyteAdmin has been upgraded and hide FlyteAdmin deployment ingress URL from the internet.",
+    "cwe_info": {
+      "CWE-613": {
+        "name": "Insufficient Session Expiration",
+        "description": "According to WASC, \"Insufficient Session Expiration is when a web site permits an attacker to reuse old session credentials or session IDs for authorization.\""
+      }
+    },
+    "repo": "https://github.com/flyteorg/flyteadmin",
+    "patch_url": [
+      "https://github.com/flyteorg/flyteadmin/commit/a1ec282d02706e074bc4986fd0412e5da3b9d00a"
+    ],
+    "programming_language": "Go",
+    "vul_func": [
+      {
+        "id": "vul_go_65_1",
+        "commit": "f18839d",
+        "file_path": "auth/authzserver/resource_server.go",
+        "start_line": 30,
+        "end_line": 42,
+        "snippet": "func (r ResourceServer) ValidateAccessToken(ctx context.Context, expectedAudience, tokenStr string) (interfaces.IdentityContext, error) {\n\traw, err := r.signatureVerifier.VerifySignature(ctx, tokenStr)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\n\tclaimsRaw := map[string]interface{}{}\n\tif err = json.Unmarshal(raw, &claimsRaw); err != nil {\n\t\treturn nil, fmt.Errorf(\"failed to unmarshal user info claim into UserInfo type. Error: %w\", err)\n\t}\n\n\treturn verifyClaims(sets.NewString(append(r.allowedAudience, expectedAudience)...), claimsRaw)\n}",
+        "vul_localization": [
+          {
+            "patch_lines": [
+              2
+            ],
+            "tag": "modify"
+          },
+          {
+            "patch_lines": [
+              7,
+              8,
+              9,
+              12
+            ],
+            "tag": "modify"
+          }
+        ]
+      }
+    ],
+    "fix_func": [
+      {
+        "id": "fix_go_65_1",
+        "commit": "a1ec282d02706e074bc4986fd0412e5da3b9d00a",
+        "file_path": "auth/authzserver/resource_server.go",
+        "start_line": 31,
+        "end_line": 47,
+        "snippet": "func (r ResourceServer) ValidateAccessToken(ctx context.Context, expectedAudience, tokenStr string) (interfaces.IdentityContext, error) {\n\t_, err := r.signatureVerifier.VerifySignature(ctx, tokenStr)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\n\tt, _, err := jwtgo.NewParser().ParseUnverified(tokenStr, jwtgo.MapClaims{})\n\tif err != nil {\n\t\treturn nil, fmt.Errorf(\"failed to parse token: %v\", err)\n\t}\n\n\tif err = t.Claims.Valid(); err != nil {\n\t\treturn nil, fmt.Errorf(\"failed to validate token: %v\", err)\n\t}\n\n\treturn verifyClaims(sets.NewString(append(r.allowedAudience, expectedAudience)...), t.Claims.(jwtgo.MapClaims))\n}"
+      },
+      {
+        "id": "fix_go_65_2",
+        "commit": "a1ec282d02706e074bc4986fd0412e5da3b9d00a",
+        "file_path": "auth/authzserver/resource_server.go",
+        "start_line": 7,
+        "end_line": 7,
+        "snippet": "\tjwtgo \"github.com/golang-jwt/jwt/v4\""
+      }
+    ],
+    "one_shot": "# Vulnerable Function\n### function vul_go_71\nvulnerable code:\nfunc (mgr *SessionManager) Parse(tokenString string) (jwt.Claims, error) {\n\t// Parse takes the token string and a function for looking up the key. The latter is especially\n\t// useful if you use multiple keys for your application.  The standard is to use 'kid' in the\n\t// head of the token to identify which key to use, but the parsed token (head and claims) is provided\n\t// to the callback, providing flexibility.\n\tvar claims jwt.MapClaims\n\tsettings, err := mgr.settingsMgr.GetSettings()\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\ttoken, err := jwt.ParseWithClaims(tokenString, &claims, func(token *jwt.Token) (interface{}, error) {\n\t\t// Don't forget to validate the alg is what you expect:\n\t\tif _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {\n\t\t\treturn nil, fmt.Errorf(\"Unexpected signing method: %v\", token.Header[\"alg\"])\n\t\t}\n\t\treturn settings.ServerSignature, nil\n\t})\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\n\tissuedAt, err := jwtutil.IssuedAtTime(claims)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\n\tsubject := jwtutil.StringField(claims, \"sub\")\n\tid := jwtutil.StringField(claims, \"jti\")\n\n\tif projName, role, ok := rbacpolicy.GetProjectRoleFromSubject(subject); ok {\n\t\tproj, err := mgr.projectsLister.Get(projName)\n\t\tif err != nil {\n\t\t\treturn nil, err\n\t\t}\n\t\t_, _, err = proj.GetJWTToken(role, issuedAt.Unix(), id)\n\t\tif err != nil {\n\t\t\treturn nil, err\n\t\t}\n\n\t\treturn token.Claims, nil\n\t}\n\n\taccount, err := mgr.settingsMgr.GetAccount(subject)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\n\tif id := jwtutil.StringField(claims, \"jti\"); id != \"\" && account.TokenIndex(id) == -1 {\n\t\treturn nil, fmt.Errorf(\"account %s does not have token with id %s\", subject, id)\n\t}\n\n\tif account.PasswordMtime != nil && issuedAt.Before(*account.PasswordMtime) {\n\t\treturn nil, fmt.Errorf(\"Account password has changed since token issued\")\n\t}\n\treturn token.Claims, nil\n}\n\n# Fixed Code\n```json\n[\n  {\n        \"id\": \"vul_go_71\",\n        \"patch\": \"func (mgr *SessionManager) Parse(tokenString string) (jwt.Claims, error) {\\n\\t// Parse takes the token string and a function for looking up the key. The latter is especially\\n\\t// useful if you use multiple keys for your application.  The standard is to use \\'kid\\' in the\\n\\t// head of the token to identify which key to use, but the parsed token (head and claims) is provided\\n\\t// to the callback, providing flexibility.\\n\\tvar claims jwt.MapClaims\\n\\tsettings, err := mgr.settingsMgr.GetSettings()\\n\\tif err != nil {\\n\\t\\treturn nil, err\\n\\t}\\n\\ttoken, err := jwt.ParseWithClaims(tokenString, &claims, func(token *jwt.Token) (interface{}, error) {\\n\\t\\t// Don\\'t forget to validate the alg is what you expect:\\n\\t\\tif _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {\\n\\t\\t\\treturn nil, fmt.Errorf(\\\"Unexpected signing method: %v\\\", token.Header[\\\"alg\\\"])\\n\\t\\t}\\n\\t\\treturn settings.ServerSignature, nil\\n\\t})\\n\\tif err != nil {\\n\\t\\treturn nil, err\\n\\t}\\n\\n\\tissuedAt, err := jwtutil.IssuedAtTime(claims)\\n\\tif err != nil {\\n\\t\\treturn nil, err\\n\\t}\\n\\n\\tsubject := jwtutil.StringField(claims, \\\"sub\\\")\\n\\tid := jwtutil.StringField(claims, \\\"jti\\\")\\n\\n\\tif projName, role, ok := rbacpolicy.GetProjectRoleFromSubject(subject); ok {\\n\\t\\tproj, err := mgr.projectsLister.Get(projName)\\n\\t\\tif err != nil {\\n\\t\\t\\treturn nil, err\\n\\t\\t}\\n\\t\\t_, _, err = proj.GetJWTToken(role, issuedAt.Unix(), id)\\n\\t\\tif err != nil {\\n\\t\\t\\treturn nil, err\\n\\t\\t}\\n\\n\\t\\treturn token.Claims, nil\\n\\t}\\n\\n\\taccount, err := mgr.settingsMgr.GetAccount(subject)\\n\\tif err != nil {\\n\\t\\treturn nil, err\\n\\t}\\n\\n\\tif !account.Enabled {\\n\\t\\treturn nil, fmt.Errorf(\\\"account %s is disabled\\\", subject)\\n\\t}\\n\\n\\tif id := jwtutil.StringField(claims, \\\"jti\\\"); id != \\\"\\\" && account.TokenIndex(id) == -1 {\\n\\t\\treturn nil, fmt.Errorf(\\\"account %s does not have token with id %s\\\", subject, id)\\n\\t}\\n\\n\\tif account.PasswordMtime != nil && issuedAt.Before(*account.PasswordMtime) {\\n\\t\\treturn nil, fmt.Errorf(\\\"Account password has changed since token issued\\\")\\n\\t}\\n\\treturn token.Claims, nil\\n}\"\n    }\n]\n",
+    "one_shot_cot": "# Vulnerable Function\n### function vul_go_71\nvulnerable code:\nfunc (mgr *SessionManager) Parse(tokenString string) (jwt.Claims, error) {\n\t// Parse takes the token string and a function for looking up the key. The latter is especially\n\t// useful if you use multiple keys for your application.  The standard is to use 'kid' in the\n\t// head of the token to identify which key to use, but the parsed token (head and claims) is provided\n\t// to the callback, providing flexibility.\n\tvar claims jwt.MapClaims\n\tsettings, err := mgr.settingsMgr.GetSettings()\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\ttoken, err := jwt.ParseWithClaims(tokenString, &claims, func(token *jwt.Token) (interface{}, error) {\n\t\t// Don't forget to validate the alg is what you expect:\n\t\tif _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {\n\t\t\treturn nil, fmt.Errorf(\"Unexpected signing method: %v\", token.Header[\"alg\"])\n\t\t}\n\t\treturn settings.ServerSignature, nil\n\t})\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\n\tissuedAt, err := jwtutil.IssuedAtTime(claims)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\n\tsubject := jwtutil.StringField(claims, \"sub\")\n\tid := jwtutil.StringField(claims, \"jti\")\n\n\tif projName, role, ok := rbacpolicy.GetProjectRoleFromSubject(subject); ok {\n\t\tproj, err := mgr.projectsLister.Get(projName)\n\t\tif err != nil {\n\t\t\treturn nil, err\n\t\t}\n\t\t_, _, err = proj.GetJWTToken(role, issuedAt.Unix(), id)\n\t\tif err != nil {\n\t\t\treturn nil, err\n\t\t}\n\n\t\treturn token.Claims, nil\n\t}\n\n\taccount, err := mgr.settingsMgr.GetAccount(subject)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\n\tif id := jwtutil.StringField(claims, \"jti\"); id != \"\" && account.TokenIndex(id) == -1 {\n\t\treturn nil, fmt.Errorf(\"account %s does not have token with id %s\", subject, id)\n\t}\n\n\tif account.PasswordMtime != nil && issuedAt.Before(*account.PasswordMtime) {\n\t\treturn nil, fmt.Errorf(\"Account password has changed since token issued\")\n\t}\n\treturn token.Claims, nil\n}\n# Root Cause Analysis\nFunction: vul_go_71\nRoot cause analysis: The vulnerability exists because the session manager does not properly invalidate tokens when a user account is disabled. The Parse function checks for password changes (via PasswordMtime) but doesn't verify if the account is currently enabled. This allows tokens to remain valid even after the associated account has been disabled.\n\n# Fix Plan\nFunction: vul_go_71\nFix steps:\n1. Add a check for account disabled status after retrieving the account information\n2. Return an error if the account is found to be disabled\n3. Maintain all existing functionality checks (password change, token validity)\n4. Keep the same error handling pattern as the existing code\n\n# Fixed Code\n```json\n[\n  {\n        \"id\": \"vul_go_71\",\n        \"patch\": \"func (mgr *SessionManager) Parse(tokenString string) (jwt.Claims, error) {\\n\\t// Parse takes the token string and a function for looking up the key. The latter is especially\\n\\t// useful if you use multiple keys for your application.  The standard is to use \\'kid\\' in the\\n\\t// head of the token to identify which key to use, but the parsed token (head and claims) is provided\\n\\t// to the callback, providing flexibility.\\n\\tvar claims jwt.MapClaims\\n\\tsettings, err := mgr.settingsMgr.GetSettings()\\n\\tif err != nil {\\n\\t\\treturn nil, err\\n\\t}\\n\\ttoken, err := jwt.ParseWithClaims(tokenString, &claims, func(token *jwt.Token) (interface{}, error) {\\n\\t\\t// Don\\'t forget to validate the alg is what you expect:\\n\\t\\tif _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {\\n\\t\\t\\treturn nil, fmt.Errorf(\\\"Unexpected signing method: %v\\\", token.Header[\\\"alg\\\"])\\n\\t\\t}\\n\\t\\treturn settings.ServerSignature, nil\\n\\t})\\n\\tif err != nil {\\n\\t\\treturn nil, err\\n\\t}\\n\\n\\tissuedAt, err := jwtutil.IssuedAtTime(claims)\\n\\tif err != nil {\\n\\t\\treturn nil, err\\n\\t}\\n\\n\\tsubject := jwtutil.StringField(claims, \\\"sub\\\")\\n\\tid := jwtutil.StringField(claims, \\\"jti\\\")\\n\\n\\tif projName, role, ok := rbacpolicy.GetProjectRoleFromSubject(subject); ok {\\n\\t\\tproj, err := mgr.projectsLister.Get(projName)\\n\\t\\tif err != nil {\\n\\t\\t\\treturn nil, err\\n\\t\\t}\\n\\t\\t_, _, err = proj.GetJWTToken(role, issuedAt.Unix(), id)\\n\\t\\tif err != nil {\\n\\t\\t\\treturn nil, err\\n\\t\\t}\\n\\n\\t\\treturn token.Claims, nil\\n\\t}\\n\\n\\taccount, err := mgr.settingsMgr.GetAccount(subject)\\n\\tif err != nil {\\n\\t\\treturn nil, err\\n\\t}\\n\\n\\tif !account.Enabled {\\n\\t\\treturn nil, fmt.Errorf(\\\"account %s is disabled\\\", subject)\\n\\t}\\n\\n\\tif id := jwtutil.StringField(claims, \\\"jti\\\"); id != \\\"\\\" && account.TokenIndex(id) == -1 {\\n\\t\\treturn nil, fmt.Errorf(\\\"account %s does not have token with id %s\\\", subject, id)\\n\\t}\\n\\n\\tif account.PasswordMtime != nil && issuedAt.Before(*account.PasswordMtime) {\\n\\t\\treturn nil, fmt.Errorf(\\\"Account password has changed since token issued\\\")\\n\\t}\\n\\treturn token.Claims, nil\\n}\"\n    }\n]",
+    "modification": {
+      "hunk_count": 2,
+      "line_count": 18,
+      "file_count": 1
+    },
+    "is_poc": true
+  },
+  {
+    "cve_id": "CVE-2018-12976",
+    "cwe_id": [
+      "CWE-22"
+    ],
+    "cve_description": "In Go Doc Dot Org (gddo) through 2018-06-27, an attacker could use specially crafted <go-import> tags in packages being fetched by gddo to cause a directory traversal and remote code execution.",
+    "cwe_info": {
+      "CWE-22": {
+        "name": "Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')",
+        "description": "The product uses external input to construct a pathname that is intended to identify a file or directory that is located underneath a restricted parent directory, but the product does not properly neutralize special elements within the pathname that can cause the pathname to resolve to a location that is outside of the restricted directory."
+      }
+    },
+    "repo": "https://github.com/golang/gddo",
+    "patch_url": [
+      "https://github.com/golang/gddo/commit/daffe1f90ec57f8ed69464f9094753fc6452e983"
+    ],
+    "programming_language": "Go",
+    "vul_func": [
+      {
+        "id": "vul_go_19_1",
+        "commit": "9ab275b",
+        "file_path": "gosrc/gosrc.go",
+        "start_line": 353,
+        "end_line": 446,
+        "snippet": "func getDynamic(ctx context.Context, client *http.Client, importPath, etag string) (*Directory, error) {\n\tmetaProto, im, sm, redir, err := fetchMeta(ctx, client, importPath)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\n\tif im.projectRoot != importPath {\n\t\tvar imRoot *importMeta\n\t\tmetaProto, imRoot, _, redir, err = fetchMeta(ctx, client, im.projectRoot)\n\t\tif err != nil {\n\t\t\treturn nil, err\n\t\t}\n\t\tif *imRoot != *im {\n\t\t\treturn nil, NotFoundError{Message: \"project root mismatch.\"}\n\t\t}\n\t}\n\n\t// clonePath is the repo URL from import meta tag, with the \"scheme://\" prefix removed.\n\t// It should be used for cloning repositories.\n\t// repo is the repo URL from import meta tag, with the \"scheme://\" prefix removed, and\n\t// a possible \".vcs\" suffix trimmed.\n\ti := strings.Index(im.repo, \"://\")\n\tif i < 0 {\n\t\treturn nil, NotFoundError{Message: \"bad repo URL: \" + im.repo}\n\t}\n\tproto := im.repo[:i]\n\tclonePath := im.repo[i+len(\"://\"):]\n\trepo := strings.TrimSuffix(clonePath, \".\"+im.vcs)\n\tdirName := importPath[len(im.projectRoot):]\n\n\tresolvedPath := repo + dirName\n\tdir, err := getStatic(ctx, client, resolvedPath, etag)\n\tif err == errNoMatch {\n\t\tresolvedPath = repo + \".\" + im.vcs + dirName\n\t\tmatch := map[string]string{\n\t\t\t\"dir\":        dirName,\n\t\t\t\"importPath\": importPath,\n\t\t\t\"clonePath\":  clonePath,\n\t\t\t\"repo\":       repo,\n\t\t\t\"scheme\":     proto,\n\t\t\t\"vcs\":        im.vcs,\n\t\t}\n\t\tdir, err = getVCSDirFn(ctx, client, match, etag)\n\t}\n\tif err != nil || dir == nil {\n\t\treturn nil, err\n\t}\n\n\tdir.ImportPath = importPath\n\tdir.ProjectRoot = im.projectRoot\n\tdir.ResolvedPath = resolvedPath\n\tdir.ProjectName = path.Base(im.projectRoot)\n\tif !redir {\n\t\tdir.ProjectURL = metaProto + \"://\" + im.projectRoot\n\t}\n\n\tif sm == nil {\n\t\treturn dir, nil\n\t}\n\n\tif isHTTPURL(sm.projectURL) {\n\t\tdir.ProjectURL = sm.projectURL\n\t}\n\n\tif isHTTPURL(sm.dirTemplate) {\n\t\tdir.BrowseURL = replaceDir(sm.dirTemplate, dirName)\n\t}\n\n\t// TODO: Refactor this to be simpler, implement the go-source meta tag spec fully.\n\tif isHTTPURL(sm.fileTemplate) {\n\t\tfileTemplate := replaceDir(sm.fileTemplate, dirName)\n\t\tif strings.Contains(fileTemplate, \"{file}\") {\n\t\t\tcut := strings.LastIndex(fileTemplate, \"{file}\") + len(\"{file}\") // Cut point is right after last {file} section.\n\t\t\tswitch hash := strings.Index(fileTemplate, \"#\"); {\n\t\t\tcase hash == -1: // If there's no '#', place cut at the end.\n\t\t\t\tcut = len(fileTemplate)\n\t\t\tcase hash > cut: // If a '#' comes after last {file}, use it as cut point.\n\t\t\t\tcut = hash\n\t\t\t}\n\t\t\thead, tail := fileTemplate[:cut], fileTemplate[cut:]\n\t\t\tfor _, f := range dir.Files {\n\t\t\t\tf.BrowseURL = strings.Replace(head, \"{file}\", f.Name, -1)\n\t\t\t}\n\n\t\t\tif strings.Contains(tail, \"{line}\") {\n\t\t\t\ts := strings.Replace(tail, \"%\", \"%%\", -1)\n\t\t\t\ts = strings.Replace(s, \"{line}\", \"%d\", 1)\n\t\t\t\tdir.LineFmt = \"%s\" + s\n\t\t\t}\n\t\t}\n\t}\n\n\treturn dir, nil\n}",
+        "vul_localization": [
+          {
+            "patch_lines": [
+              28
+            ],
+            "tag": "add"
+          }
+        ]
+      }
+    ],
+    "fix_func": [
+      {
+        "id": "fix_go_19_1",
+        "commit": "daffe1f",
+        "file_path": "gosrc/gosrc.go",
+        "start_line": 353,
+        "end_line": 449,
+        "snippet": "func getDynamic(ctx context.Context, client *http.Client, importPath, etag string) (*Directory, error) {\n\tmetaProto, im, sm, redir, err := fetchMeta(ctx, client, importPath)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\n\tif im.projectRoot != importPath {\n\t\tvar imRoot *importMeta\n\t\tmetaProto, imRoot, _, redir, err = fetchMeta(ctx, client, im.projectRoot)\n\t\tif err != nil {\n\t\t\treturn nil, err\n\t\t}\n\t\tif *imRoot != *im {\n\t\t\treturn nil, NotFoundError{Message: \"project root mismatch.\"}\n\t\t}\n\t}\n\n\t// clonePath is the repo URL from import meta tag, with the \"scheme://\" prefix removed.\n\t// It should be used for cloning repositories.\n\t// repo is the repo URL from import meta tag, with the \"scheme://\" prefix removed, and\n\t// a possible \".vcs\" suffix trimmed.\n\ti := strings.Index(im.repo, \"://\")\n\tif i < 0 {\n\t\treturn nil, NotFoundError{Message: \"bad repo URL: \" + im.repo}\n\t}\n\tproto := im.repo[:i]\n\tclonePath := im.repo[i+len(\"://\"):]\n\trepo := strings.TrimSuffix(clonePath, \".\"+im.vcs)\n\tif !IsValidRemotePath(repo) {\n\t\treturn nil, fmt.Errorf(\"bad path from meta: %s\", repo)\n\t}\n\tdirName := importPath[len(im.projectRoot):]\n\n\tresolvedPath := repo + dirName\n\tdir, err := getStatic(ctx, client, resolvedPath, etag)\n\tif err == errNoMatch {\n\t\tresolvedPath = repo + \".\" + im.vcs + dirName\n\t\tmatch := map[string]string{\n\t\t\t\"dir\":        dirName,\n\t\t\t\"importPath\": importPath,\n\t\t\t\"clonePath\":  clonePath,\n\t\t\t\"repo\":       repo,\n\t\t\t\"scheme\":     proto,\n\t\t\t\"vcs\":        im.vcs,\n\t\t}\n\t\tdir, err = getVCSDirFn(ctx, client, match, etag)\n\t}\n\tif err != nil || dir == nil {\n\t\treturn nil, err\n\t}\n\n\tdir.ImportPath = importPath\n\tdir.ProjectRoot = im.projectRoot\n\tdir.ResolvedPath = resolvedPath\n\tdir.ProjectName = path.Base(im.projectRoot)\n\tif !redir {\n\t\tdir.ProjectURL = metaProto + \"://\" + im.projectRoot\n\t}\n\n\tif sm == nil {\n\t\treturn dir, nil\n\t}\n\n\tif isHTTPURL(sm.projectURL) {\n\t\tdir.ProjectURL = sm.projectURL\n\t}\n\n\tif isHTTPURL(sm.dirTemplate) {\n\t\tdir.BrowseURL = replaceDir(sm.dirTemplate, dirName)\n\t}\n\n\t// TODO: Refactor this to be simpler, implement the go-source meta tag spec fully.\n\tif isHTTPURL(sm.fileTemplate) {\n\t\tfileTemplate := replaceDir(sm.fileTemplate, dirName)\n\t\tif strings.Contains(fileTemplate, \"{file}\") {\n\t\t\tcut := strings.LastIndex(fileTemplate, \"{file}\") + len(\"{file}\") // Cut point is right after last {file} section.\n\t\t\tswitch hash := strings.Index(fileTemplate, \"#\"); {\n\t\t\tcase hash == -1: // If there's no '#', place cut at the end.\n\t\t\t\tcut = len(fileTemplate)\n\t\t\tcase hash > cut: // If a '#' comes after last {file}, use it as cut point.\n\t\t\t\tcut = hash\n\t\t\t}\n\t\t\thead, tail := fileTemplate[:cut], fileTemplate[cut:]\n\t\t\tfor _, f := range dir.Files {\n\t\t\t\tf.BrowseURL = strings.Replace(head, \"{file}\", f.Name, -1)\n\t\t\t}\n\n\t\t\tif strings.Contains(tail, \"{line}\") {\n\t\t\t\ts := strings.Replace(tail, \"%\", \"%%\", -1)\n\t\t\t\ts = strings.Replace(s, \"{line}\", \"%d\", 1)\n\t\t\t\tdir.LineFmt = \"%s\" + s\n\t\t\t}\n\t\t}\n\t}\n\n\treturn dir, nil\n}"
+      }
+    ],
+    "one_shot": "# Vulnerable Function\n### function vul_go_189\nvulnerable code:\nfunc UploadFileSafe(provider *Provider, fullFilePath string, fileBuffer *bytes.Buffer) (string, string, error) {\n\tvar fileUrl string\n\tvar objectKey string\n\tvar err error\n\ttimes := 0\n\tfor {\n\t\tfileUrl, objectKey, err = uploadFile(provider, fullFilePath, fileBuffer)\n\t\tif err != nil {\n\t\t\ttimes += 1\n\t\t\tif times >= 5 {\n\t\t\t\treturn \"\", \"\", err\n\t\t\t}\n\t\t} else {\n\t\t\tbreak\n\t\t}\n\t}\n\treturn fileUrl, objectKey, nil\n}\n\n# Fixed Code\n```json\n[\n  {\n        \"id\": \"vul_go_189\",\n        \"patch\": \"func UploadFileSafe(provider *Provider, fullFilePath string, fileBuffer *bytes.Buffer) (string, string, error) {\\n\\t// check fullFilePath is there security issue\\n\\tif strings.Contains(fullFilePath, \\\"..\\\") {\\n\\t\\treturn \\\"\\\", \\\"\\\", fmt.Errorf(\\\"the fullFilePath: %s is not allowed\\\", fullFilePath)\\n\\t}\\n\\n\\tvar fileUrl string\\n\\tvar objectKey string\\n\\tvar err error\\n\\ttimes := 0\\n\\tfor {\\n\\t\\tfileUrl, objectKey, err = uploadFile(provider, fullFilePath, fileBuffer)\\n\\t\\tif err != nil {\\n\\t\\t\\ttimes += 1\\n\\t\\t\\tif times >= 5 {\\n\\t\\t\\t\\treturn \\\"\\\", \\\"\\\", err\\n\\t\\t\\t}\\n\\t\\t} else {\\n\\t\\t\\tbreak\\n\\t\\t}\\n\\t}\\n\\treturn fileUrl, objectKey, nil\\n}\"\n    }\n]\n",
+    "one_shot_cot": "# Vulnerable Function\n### function vul_go_189\nvulnerable code:\nfunc UploadFileSafe(provider *Provider, fullFilePath string, fileBuffer *bytes.Buffer) (string, string, error) {\n\tvar fileUrl string\n\tvar objectKey string\n\tvar err error\n\ttimes := 0\n\tfor {\n\t\tfileUrl, objectKey, err = uploadFile(provider, fullFilePath, fileBuffer)\n\t\tif err != nil {\n\t\t\ttimes += 1\n\t\t\tif times >= 5 {\n\t\t\t\treturn \"\", \"\", err\n\t\t\t}\n\t\t} else {\n\t\t\tbreak\n\t\t}\n\t}\n\treturn fileUrl, objectKey, nil\n}\n# Root Cause Analysis\nFunction: vul_go_189\nRoot cause analysis: The vulnerability exists because the function accepts a user-controlled `fullFilePath` parameter without proper validation or sanitization. This allows an attacker to specify arbitrary file paths, potentially leading to file overwrites in sensitive locations (path traversal). The fundamental issue is the lack of path validation and restriction to intended directories.\n\n# Fix Plan\nFunction: vul_go_189\nFix steps:\n1. Implement path sanitization to prevent directory traversal attacks\n2. Validate that the file path is within the intended directory structure\n3. Add checks to ensure the path doesn't contain any malicious sequences (../)\n4. Maintain the original retry logic and functionality while adding these security checks\n\n# Fixed Code\n```json\n[\n  {\n        \"id\": \"vul_go_189\",\n        \"patch\": \"func UploadFileSafe(provider *Provider, fullFilePath string, fileBuffer *bytes.Buffer) (string, string, error) {\\n\\t// check fullFilePath is there security issue\\n\\tif strings.Contains(fullFilePath, \\\"..\\\") {\\n\\t\\treturn \\\"\\\", \\\"\\\", fmt.Errorf(\\\"the fullFilePath: %s is not allowed\\\", fullFilePath)\\n\\t}\\n\\n\\tvar fileUrl string\\n\\tvar objectKey string\\n\\tvar err error\\n\\ttimes := 0\\n\\tfor {\\n\\t\\tfileUrl, objectKey, err = uploadFile(provider, fullFilePath, fileBuffer)\\n\\t\\tif err != nil {\\n\\t\\t\\ttimes += 1\\n\\t\\t\\tif times >= 5 {\\n\\t\\t\\t\\treturn \\\"\\\", \\\"\\\", err\\n\\t\\t\\t}\\n\\t\\t} else {\\n\\t\\t\\tbreak\\n\\t\\t}\\n\\t}\\n\\treturn fileUrl, objectKey, nil\\n}\"\n    }\n]",
+    "modification": {
+      "hunk_count": 1,
+      "line_count": 3,
+      "file_count": 1
+    },
+    "is_poc": true
+  },
+  {
+    "cve_id": "CVE-2024-5823",
+    "cwe_id": [
+      "CWE-610"
+    ],
+    "cve_description": "A file overwrite vulnerability exists in gaizhenbiao/chuanhuchatgpt versions <= 20240410. This vulnerability allows an attacker to gain unauthorized access to overwrite critical configuration files within the system. Exploiting this vulnerability can lead to unauthorized changes in system behavior or security settings. Additionally, tampering with these configuration files can result in a denial of service (DoS) condition, disrupting normal system operation.",
+    "cwe_info": {
+      "CWE-610": {
+        "name": "Externally Controlled Reference to a Resource in Another Sphere",
+        "description": "The product uses an externally controlled name or reference that resolves to a resource that is outside of the intended control sphere."
+      }
+    },
+    "repo": "https://github.com/gaizhenbiao/chuanhuchatgpt",
+    "patch_url": [
+      "https://github.com/gaizhenbiao/chuanhuchatgpt/commit/720c23d755a4a955dcb0a54e8c200a2247a27f8b"
+    ],
+    "programming_language": "Python",
+    "vul_func": [
+      {
+        "id": "vul_py_56_1",
+        "commit": "ffea5e9",
+        "file_path": "modules/utils.py",
+        "start_line": 744,
+        "end_line": 760,
+        "snippet": "def update_chuanhu():\n    from .repo import background_update\n\n    print(\"[Updater] Trying to update...\")\n    update_status = background_update()\n    if update_status == \"success\":\n        logging.info(\"Successfully updated, restart needed\")\n        status = '<span id=\"update-status\" class=\"hideK\">success</span>'\n        return gr.Markdown(value=i18n(\"\\u66f4\\u65b0\\u6210\\u529f\\uff0c\\u8bf7\\u91cd\\u542f\\u672c\\u7a0b\\u5e8f\") + status)\n    else:\n        status = '<span id=\"update-status\" class=\"hideK\">failure</span>'\n        return gr.Markdown(\n            value=i18n(\n                \"\\u66f4\\u65b0\\u5931\\u8d25\\uff0c\\u8bf7\\u5c1d\\u8bd5[\\u624b\\u52a8\\u66f4\\u65b0](https://github.com/GaiZhenbiao/ChuanhuChatGPT/wiki/\\u4f7f\\u7528\\u6559\\u7a0b#\\u624b\\u52a8\\u66f4\\u65b0)\"\n            )\n            + status\n        )",
+        "vul_localization": [
+          {
+            "patch_lines": [
+              1
+            ],
+            "tag": "modify"
+          }
+        ]
+      }
+    ],
+    "fix_func": [
+      {
+        "id": "fix_py_56_1",
+        "commit": "720c23d755a4a955dcb0a54e8c200a2247a27f8b",
+        "file_path": "ChuanhuChatbot.py",
+        "start_line": 784,
+        "end_line": 784,
+        "snippet": "        [user_name],"
+      },
+      {
+        "id": "fix_py_56_2",
+        "commit": "720c23d755a4a955dcb0a54e8c200a2247a27f8b",
+        "file_path": "modules/utils.py",
+        "start_line": 744,
+        "end_line": 762,
+        "snippet": "def update_chuanhu(username):\n    if username not in admin_list:\n        return gr.Markdown(value=i18n(\"no_permission_to_update_description\"))\n    from .repo import background_update\n\n    print(\"[Updater] Trying to update...\")\n    update_status = background_update()\n    if update_status == \"success\":\n        logging.info(\"Successfully updated, restart needed\")\n        status = '<span id=\"update-status\" class=\"hideK\">success</span>'\n        return gr.Markdown(value=i18n(\"\\u66f4\\u65b0\\u6210\\u529f\\uff0c\\u8bf7\\u91cd\\u542f\\u672c\\u7a0b\\u5e8f\") + status)\n    else:\n        status = '<span id=\"update-status\" class=\"hideK\">failure</span>'\n        return gr.Markdown(\n            value=i18n(\n                \"\\u66f4\\u65b0\\u5931\\u8d25\\uff0c\\u8bf7\\u5c1d\\u8bd5[\\u624b\\u52a8\\u66f4\\u65b0](https://github.com/GaiZhenbiao/ChuanhuChatGPT/wiki/\\u4f7f\\u7528\\u6559\\u7a0b#\\u624b\\u52a8\\u66f4\\u65b0)\"\n            )\n            + status\n        )"
+      },
+      {
+        "id": "fix_py_56_3",
+        "commit": "720c23d755a4a955dcb0a54e8c200a2247a27f8b",
+        "file_path": "modules/utils.py",
+        "start_line": 30,
+        "end_line": 30,
+        "snippet": "from modules.config import retrieve_proxy, hide_history_when_not_logged_in, admin_list"
+      }
+    ],
+    "one_shot": "# Vulnerable Function\n### function vul_py_210_1\nvulnerable code:\ndef open_firebase(url):\n    # Detect Open Firebase Database\n    try:\n        if not valid_host(url):\n            logger.warning('Invalid Firebase URL')\n            return url, False\n        purl = urlparse(url)\n        base_url = '{}://{}/.json'.format(purl.scheme, purl.netloc)\n        proxies, verify = upstream_proxy('https')\n        headers = {\n            'User-Agent': ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1)'\n                           ' AppleWebKit/537.36 (KHTML, like Gecko) '\n                           'Chrome/39.0.2171.95 Safari/537.36')}\n        resp = requests.get(base_url, headers=headers,\n                            proxies=proxies, verify=verify)\n        if resp.status_code == 200:\n            return base_url, True\n    except Exception:\n        logger.warning('Open Firebase DB detection failed.')\n    return url, False\n\n### function vul_py_210_2\nvulnerable code:\ndef firebase_analysis(urls):\n    # Detect Firebase URL\n    firebase_db = []\n    logger.info('Detecting Firebase URL(s)')\n    for url in urls:\n        if 'firebaseio.com' in url:\n            returl, is_open = open_firebase(url)\n            fbdic = {'url': returl, 'open': is_open}\n            if fbdic not in firebase_db:\n                firebase_db.append(fbdic)\n    return firebase_db\n\n# Fixed Code\n```json\n[\n  {\n        \"id\": \"vul_py_210_1\",\n        \"patch\": \"def open_firebase(url):\\n    # Detect Open Firebase Database\\n    try:\\n        invalid = \\'Invalid Firebase URL\\'\\n        if not valid_host(url):\\n            logger.warning(invalid)\\n            return url, False\\n        purl = urlparse(url)\\n        if not purl.netloc.endswith(\\'firebaseio.com\\'):\\n            logger.warning(invalid)\\n            return url, False\\n        base_url = \\'{}://{}/.json\\'.format(purl.scheme, purl.netloc)\\n        proxies, verify = upstream_proxy(\\'https\\')\\n        headers = {\\n            \\'User-Agent\\': (\\'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1)\\'\\n                           \\' AppleWebKit/537.36 (KHTML, like Gecko) \\'\\n                           \\'Chrome/39.0.2171.95 Safari/537.36\\')}\\n        resp = requests.get(base_url, headers=headers,\\n                            proxies=proxies, verify=verify,\\n                            allow_redirects=False)\\n        if resp.status_code == 200:\\n            return base_url, True\\n    except Exception:\\n        logger.warning(\\'Open Firebase DB detection failed.\\')\\n    return url, False\"\n    },\n  {\n        \"id\": \"vul_py_210_2\",\n        \"patch\": \"def firebase_analysis(urls):\\n    # Detect Firebase URL\\n    firebase_db = []\\n    logger.info(\\'Detecting Firebase URL(s)\\')\\n    for url in urls:\\n        if \\'firebaseio.com\\' not in url:\\n            continue\\n        returl, is_open = open_firebase(url)\\n        fbdic = {\\'url\\': returl, \\'open\\': is_open}\\n        if fbdic not in firebase_db:\\n            firebase_db.append(fbdic)\\n    return firebase_db\"\n    }\n]\n",
+    "one_shot_cot": "# Vulnerable Function\n### function vul_py_210_1\nvulnerable code:\ndef open_firebase(url):\n    # Detect Open Firebase Database\n    try:\n        if not valid_host(url):\n            logger.warning('Invalid Firebase URL')\n            return url, False\n        purl = urlparse(url)\n        base_url = '{}://{}/.json'.format(purl.scheme, purl.netloc)\n        proxies, verify = upstream_proxy('https')\n        headers = {\n            'User-Agent': ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1)'\n                           ' AppleWebKit/537.36 (KHTML, like Gecko) '\n                           'Chrome/39.0.2171.95 Safari/537.36')}\n        resp = requests.get(base_url, headers=headers,\n                            proxies=proxies, verify=verify)\n        if resp.status_code == 200:\n            return base_url, True\n    except Exception:\n        logger.warning('Open Firebase DB detection failed.')\n    return url, False\n\n### function vul_py_210_2\nvulnerable code:\ndef firebase_analysis(urls):\n    # Detect Firebase URL\n    firebase_db = []\n    logger.info('Detecting Firebase URL(s)')\n    for url in urls:\n        if 'firebaseio.com' in url:\n            returl, is_open = open_firebase(url)\n            fbdic = {'url': returl, 'open': is_open}\n            if fbdic not in firebase_db:\n                firebase_db.append(fbdic)\n    return firebase_db\n# Root Cause Analysis\nFunction: vul_py_210_1\nRoot cause analysis: The vulnerability exists because the function does not properly validate the URL scheme and host before making the request. While there is a `valid_host()` check, it's not sufficient to prevent SSRF attacks. The function makes direct HTTP requests to any provided URL without proper restrictions on internal network targets.\n\nFunction: vul_py_210_2\nRoot cause analysis: This function processes URLs containing 'firebaseio.com' but doesn't perform any additional validation before passing them to `open_firebase()`. It's part of the SSRF chain as it allows potentially malicious URLs to reach the request-making function.\n\n# Fix Plan\nFunction: vul_py_210_1\nFix steps:\n1. Add strict validation of URL scheme (only allow http/https)\n2. Implement proper hostname validation to block internal/private IPs\n3. Add timeout to the request to prevent hanging\n4. Restrict redirects to prevent SSRF via open redirects\n5. Maintain existing functionality for valid Firebase URLs\n\nFunction: vul_py_210_2\nFix steps:\n1. Add preliminary URL validation before processing\n2. Ensure only properly formatted Firebase URLs are processed\n3. Maintain existing functionality for valid Firebase URLs\n\n# Fixed Code\n```json\n[\n  {\n        \"id\": \"vul_py_210_1\",\n        \"patch\": \"def open_firebase(url):\\n    # Detect Open Firebase Database\\n    try:\\n        invalid = \\'Invalid Firebase URL\\'\\n        if not valid_host(url):\\n            logger.warning(invalid)\\n            return url, False\\n        purl = urlparse(url)\\n        if not purl.netloc.endswith(\\'firebaseio.com\\'):\\n            logger.warning(invalid)\\n            return url, False\\n        base_url = \\'{}://{}/.json\\'.format(purl.scheme, purl.netloc)\\n        proxies, verify = upstream_proxy(\\'https\\')\\n        headers = {\\n            \\'User-Agent\\': (\\'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1)\\'\\n                           \\' AppleWebKit/537.36 (KHTML, like Gecko) \\'\\n                           \\'Chrome/39.0.2171.95 Safari/537.36\\')}\\n        resp = requests.get(base_url, headers=headers,\\n                            proxies=proxies, verify=verify,\\n                            allow_redirects=False)\\n        if resp.status_code == 200:\\n            return base_url, True\\n    except Exception:\\n        logger.warning(\\'Open Firebase DB detection failed.\\')\\n    return url, False\"\n    },\n  {\n        \"id\": \"vul_py_210_2\",\n        \"patch\": \"def firebase_analysis(urls):\\n    # Detect Firebase URL\\n    firebase_db = []\\n    logger.info(\\'Detecting Firebase URL(s)\\')\\n    for url in urls:\\n        if \\'firebaseio.com\\' not in url:\\n            continue\\n        returl, is_open = open_firebase(url)\\n        fbdic = {\\'url\\': returl, \\'open\\': is_open}\\n        if fbdic not in firebase_db:\\n            firebase_db.append(fbdic)\\n    return firebase_db\"\n    }\n]",
+    "modification": {
+      "hunk_count": 3,
+      "line_count": 12,
+      "file_count": 2
+    },
+    "is_poc": true
+  },
+  {
+    "cve_id": "CVE-2021-36157",
+    "cwe_id": [
+      "CWE-73",
+      "CWE-22"
+    ],
+    "cve_description": "An issue was discovered in Grafana Cortex through 1.9.0. The header value X-Scope-OrgID is used to construct file paths for rules files, and if crafted to conduct directory traversal such as ae ../../sensitive/path/in/deployment pathname, then Cortex will attempt to parse a rules file at that location and include some of the contents in the error message. (Other Cortex API requests can also be sent a malicious OrgID header, e.g., tricking the ingester into writing metrics to a different location, but the effect is nuisance rather than information disclosure.)",
+    "cwe_info": {
+      "CWE-73": {
+        "name": "External Control of File Name or Path",
+        "description": "The product allows user input to control or influence paths or file names that are used in filesystem operations."
+      },
+      "CWE-22": {
+        "name": "Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')",
+        "description": "The product uses external input to construct a pathname that is intended to identify a file or directory that is located underneath a restricted parent directory, but the product does not properly neutralize special elements within the pathname that can cause the pathname to resolve to a location that is outside of the restricted directory."
+      }
+    },
+    "repo": "https://github.com/cortexproject/cortex",
+    "patch_url": [
+      "https://github.com/cortexproject/cortex/commit/d9e1f81f40c607b9e97c2fc6db70ae54679917c4"
+    ],
+    "programming_language": "Go",
+    "vul_func": [
+      {
+        "id": "vul_go_22_1",
+        "commit": "1e4e0ca",
+        "file_path": "pkg/tenant/resolver.go",
+        "start_line": 67,
+        "end_line": 74,
+        "snippet": "func (t *SingleResolver) TenantIDs(ctx context.Context) ([]string, error) {\n\t//lint:ignore faillint wrapper around upstream method\n\torgID, err := user.ExtractOrgID(ctx)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\treturn []string{orgID}, err\n}",
+        "vul_localization": [
+          {
+            "patch_lines": [
+              3
+            ],
+            "tag": "modify"
+          }
+        ]
+      }
+    ],
+    "fix_func": [
+      {
+        "id": "fix_go_22_1",
+        "commit": "d9e1f81",
+        "file_path": "pkg/tenant/resolver.go",
+        "start_line": 91,
+        "end_line": 97,
+        "snippet": "func (t *SingleResolver) TenantIDs(ctx context.Context) ([]string, error) {\n\torgID, err := t.TenantID(ctx)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\treturn []string{orgID}, err\n}"
+      },
+      {
+        "id": "fix_go_22_2",
+        "commit": "d9e1f81",
+        "file_path": "pkg/tenant/resolver.go",
+        "start_line": 66,
+        "end_line": 75,
+        "snippet": "func containsUnsafePathSegments(id string) bool {\n\t// handle the relative reference to current and parent path.\n\tif id == \".\" || id == \"..\" {\n\t\treturn true\n\t}\n\n\treturn strings.ContainsAny(id, \"\\\\/\")\n}\n\nvar errInvalidTenantID = errors.New(\"invalid tenant ID\")"
+      },
+      {
+        "id": "fix_go_22_3",
+        "commit": "d9e1f81",
+        "file_path": "pkg/tenant/resolver.go",
+        "start_line": 77,
+        "end_line": 89,
+        "snippet": "func (t *SingleResolver) TenantID(ctx context.Context) (string, error) {\n\t//lint:ignore faillint wrapper around upstream method\n\tid, err := user.ExtractOrgID(ctx)\n\tif err != nil {\n\t\treturn \"\", err\n\t}\n\n\tif containsUnsafePathSegments(id) {\n\t\treturn \"\", errInvalidTenantID\n\t}\n\n\treturn id, nil\n}"
+      }
+    ],
+    "one_shot": "# Vulnerable Function\n### function vul_go_211_1\nvulnerable code:\nfunc getDefaultDirectory() string {\n\tdirectory := \"/db\"\n\tif env.IsDevelopment {\n\t\tdirectory = \"./tmp\"\n\t}\n\treturn directory\n}\n\n### function vul_go_211_2\nvulnerable code:\nfunc DB(config *engine.PluginConfig) (*gorm.DB, error) {\n\tdatabase := config.Credentials.Database\n\tfileNameDatabase := filepath.Join(getDefaultDirectory(), database)\n\tif _, err := os.Stat(fileNameDatabase); errors.Is(err, os.ErrNotExist) {\n\t\treturn nil, errDoesNotExist\n\t}\n\tdb, err := gorm.Open(sqlite.Open(fileNameDatabase), &gorm.Config{})\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\treturn db, nil\n}\n\n# Fixed Code\n```json\n[\n  {\n        \"id\": \"vul_go_211_1\",\n        \"patch\": \"func getDefaultDirectory() string {\\n\\tdirectory := \\\"/db/\\\"\\n\\tif env.IsDevelopment {\\n\\t\\tdirectory = \\\"./tmp/\\\"\\n\\t}\\n\\treturn directory\\n}\"\n    },\n  {\n        \"id\": \"vul_go_211_2\",\n        \"patch\": \"func DB(config *engine.PluginConfig) (*gorm.DB, error) {\\n\\tdatabase := config.Credentials.Database\\n\\tfileNameDatabase := filepath.Join(getDefaultDirectory(), database)\\n\\tif !strings.HasPrefix(fileNameDatabase, getDefaultDirectory()) {\\n\\t\\treturn nil, errDoesNotExist\\n\\t}\\n\\tif _, err := os.Stat(fileNameDatabase); errors.Is(err, os.ErrNotExist) {\\n\\t\\treturn nil, errDoesNotExist\\n\\t}\\n\\tdb, err := gorm.Open(sqlite.Open(fileNameDatabase), &gorm.Config{})\\n\\tif err != nil {\\n\\t\\treturn nil, err\\n\\t}\\n\\treturn db, nil\\n}\"\n    }\n]\n",
+    "one_shot_cot": "# Vulnerable Function\n### function vul_go_211_1\nvulnerable code:\nfunc getDefaultDirectory() string {\n\tdirectory := \"/db\"\n\tif env.IsDevelopment {\n\t\tdirectory = \"./tmp\"\n\t}\n\treturn directory\n}\n\n### function vul_go_211_2\nvulnerable code:\nfunc DB(config *engine.PluginConfig) (*gorm.DB, error) {\n\tdatabase := config.Credentials.Database\n\tfileNameDatabase := filepath.Join(getDefaultDirectory(), database)\n\tif _, err := os.Stat(fileNameDatabase); errors.Is(err, os.ErrNotExist) {\n\t\treturn nil, errDoesNotExist\n\t}\n\tdb, err := gorm.Open(sqlite.Open(fileNameDatabase), &gorm.Config{})\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\treturn db, nil\n}\n# Root Cause Analysis\nFunction: vul_go_211_1\nRoot cause analysis: The function simply returns a hardcoded directory path without any validation or security checks. While not directly vulnerable itself, it provides the base path that will be combined with user input in vul_go_211_2.\n\nFunction: vul_go_211_2\nRoot cause analysis: The vulnerability occurs because:\n1. The function takes user-controlled input (config.Credentials.Database) and combines it with a base directory path\n2. No validation is performed to ensure the resulting path stays within the intended directory\n3. The filepath.Join() function is used which doesn't prevent path traversal sequences (like ../)\n4. The os.Stat() check only verifies file existence, not path containment\n\n# Fix Step\nFunction: vul_go_211_1\nFix steps: No changes needed as this function is not directly vulnerable.\n\nFunction: vul_go_211_2\nFix steps:\n1. Get the default directory path using getDefaultDirectory()\n2. Combine with user input using filepath.Join()\n3. Use filepath.Abs() to get absolute path of the combined path\n4. Verify that the resulting path is within the intended directory by checking if it starts with the absolute path of the default directory\n5. Only proceed with database connection if path validation passes\n\n# Fixed Code\n```json\n[\n  {\n        \"id\": \"vul_go_211_1\",\n        \"patch\": \"func getDefaultDirectory() string {\\n\\tdirectory := \\\"/db/\\\"\\n\\tif env.IsDevelopment {\\n\\t\\tdirectory = \\\"./tmp/\\\"\\n\\t}\\n\\treturn directory\\n}\"\n    },\n  {\n        \"id\": \"vul_go_211_2\",\n        \"patch\": \"func DB(config *engine.PluginConfig) (*gorm.DB, error) {\\n\\tdatabase := config.Credentials.Database\\n\\tfileNameDatabase := filepath.Join(getDefaultDirectory(), database)\\n\\tif !strings.HasPrefix(fileNameDatabase, getDefaultDirectory()) {\\n\\t\\treturn nil, errDoesNotExist\\n\\t}\\n\\tif _, err := os.Stat(fileNameDatabase); errors.Is(err, os.ErrNotExist) {\\n\\t\\treturn nil, errDoesNotExist\\n\\t}\\n\\tdb, err := gorm.Open(sqlite.Open(fileNameDatabase), &gorm.Config{})\\n\\tif err != nil {\\n\\t\\treturn nil, err\\n\\t}\\n\\treturn db, nil\\n}\"\n    }\n]",
+    "modification": {
+      "hunk_count": 1,
+      "line_count": 3,
+      "file_count": 1
+    },
+    "is_poc": true
+  },
+  {
+    "cve_id": "CVE-2023-30172",
+    "cwe_id": [
+      "CWE-73",
+      "CWE-22"
+    ],
+    "cve_description": "A directory traversal vulnerability in the /get-artifact API method of the mlflow platform up to v2.0.1 allows attackers to read arbitrary files on the server via the path parameter.",
+    "cwe_info": {
+      "CWE-73": {
+        "name": "External Control of File Name or Path",
+        "description": "The product allows user input to control or influence paths or file names that are used in filesystem operations."
+      },
+      "CWE-22": {
+        "name": "Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')",
+        "description": "The product uses external input to construct a pathname that is intended to identify a file or directory that is located underneath a restricted parent directory, but the product does not properly neutralize special elements within the pathname that can cause the pathname to resolve to a location that is outside of the restricted directory."
+      }
+    },
+    "repo": "https://github.com/mlflow/mlflow",
+    "patch_url": [
+      "https://github.com/mlflow/mlflow/commit/ac4b697bb0bb8a331944dca63f4235b4bf602ab8"
+    ],
+    "programming_language": "Python",
+    "vul_func": [
+      {
+        "id": "vul_py_30_1",
+        "commit": "d1c7621",
+        "file_path": "mlflow/server/handlers.py",
+        "start_line": 528,
+        "end_line": 546,
+        "snippet": "def get_artifact_handler():\n    from querystring_parser import parser\n\n    query_string = request.query_string.decode(\"utf-8\")\n    request_dict = parser.parse(query_string, normalized=True)\n    run_id = request_dict.get(\"run_id\") or request_dict.get(\"run_uuid\")\n    run = _get_tracking_store().get_run(run_id)\n\n    if _is_servable_proxied_run_artifact_root(run.info.artifact_uri):\n        artifact_repo = _get_artifact_repo_mlflow_artifacts()\n        artifact_path = _get_proxied_run_artifact_destination_path(\n            proxied_artifact_root=run.info.artifact_uri,\n            relative_path=request_dict[\"path\"],\n        )\n    else:\n        artifact_repo = _get_artifact_repo(run)\n        artifact_path = request_dict[\"path\"]\n\n    return _send_artifact(artifact_repo, artifact_path)",
+        "vul_localization": [
+          {
+            "patch_lines": [
+              6
+            ],
+            "tag": "add"
+          },
+          {
+            "patch_lines": [
+              13
+            ],
+            "tag": "modify"
+          },
+          {
+            "patch_lines": [
+              17
+            ],
+            "tag": "modify"
+          }
+        ]
+      },
+      {
+        "id": "vul_py_30_2",
+        "commit": "d1c7621",
+        "file_path": "mlflow/server/handlers.py",
+        "start_line": 887,
+        "end_line": 916,
+        "snippet": "def _list_artifacts():\n    request_message = _get_request_message(\n        ListArtifacts(),\n        schema={\n            \"run_id\": [_assert_string, _assert_required],\n            \"path\": [_assert_string],\n            \"page_token\": [_assert_string],\n        },\n    )\n    response_message = ListArtifacts.Response()\n    if request_message.HasField(\"path\"):\n        path = request_message.path\n    else:\n        path = None\n    run_id = request_message.run_id or request_message.run_uuid\n    run = _get_tracking_store().get_run(run_id)\n\n    if _is_servable_proxied_run_artifact_root(run.info.artifact_uri):\n        artifact_entities = _list_artifacts_for_proxied_run_artifact_root(\n            proxied_artifact_root=run.info.artifact_uri,\n            relative_path=path,\n        )\n    else:\n        artifact_entities = _get_artifact_repo(run).list_artifacts(path)\n\n    response_message.files.extend([a.to_proto() for a in artifact_entities])\n    response_message.root_uri = run.info.artifact_uri\n    response = Response(mimetype=\"application/json\")\n    response.set_data(message_to_json(response_message))\n    return response",
+        "vul_localization": [
+          {
+            "patch_lines": [
+              12
+            ],
+            "tag": "add"
+          }
+        ]
+      },
+      {
+        "id": "vul_py_30_3",
+        "commit": "d1c7621",
+        "file_path": "mlflow/server/handlers.py",
+        "start_line": 1269,
+        "end_line": 1288,
+        "snippet": "def get_model_version_artifact_handler():\n    from querystring_parser import parser\n\n    query_string = request.query_string.decode(\"utf-8\")\n    request_dict = parser.parse(query_string, normalized=True)\n    name = request_dict.get(\"name\")\n    version = request_dict.get(\"version\")\n    artifact_uri = _get_model_registry_store().get_model_version_download_uri(name, version)\n\n    if _is_servable_proxied_run_artifact_root(artifact_uri):\n        artifact_repo = _get_artifact_repo_mlflow_artifacts()\n        artifact_path = _get_proxied_run_artifact_destination_path(\n            proxied_artifact_root=artifact_uri,\n            relative_path=request_dict[\"path\"],\n        )\n    else:\n        artifact_repo = get_artifact_repository(artifact_uri)\n        artifact_path = request_dict[\"path\"]\n\n    return _send_artifact(artifact_repo, artifact_path)",
+        "vul_localization": [
+          {
+            "patch_lines": [
+              7
+            ],
+            "tag": "add"
+          },
+          {
+            "patch_lines": [
+              14
+            ],
+            "tag": "modify"
+          },
+          {
+            "patch_lines": [
+              18
+            ],
+            "tag": "modify"
+          }
+        ]
+      }
+    ],
+    "fix_func": [
+      {
+        "id": "fix_py_30_1",
+        "commit": "ac4b697",
+        "file_path": "mlflow/server/handlers.py",
+        "start_line": 548,
+        "end_line": 568,
+        "snippet": "def get_artifact_handler():\n    from querystring_parser import parser\n\n    query_string = request.query_string.decode(\"utf-8\")\n    request_dict = parser.parse(query_string, normalized=True)\n    run_id = request_dict.get(\"run_id\") or request_dict.get(\"run_uuid\")\n    path = request_dict[\"path\"]\n    validate_path_is_safe(path)\n    run = _get_tracking_store().get_run(run_id)\n\n    if _is_servable_proxied_run_artifact_root(run.info.artifact_uri):\n        artifact_repo = _get_artifact_repo_mlflow_artifacts()\n        artifact_path = _get_proxied_run_artifact_destination_path(\n            proxied_artifact_root=run.info.artifact_uri,\n            relative_path=path,\n        )\n    else:\n        artifact_repo = _get_artifact_repo(run)\n        artifact_path = path\n\n    return _send_artifact(artifact_repo, artifact_path)"
+      },
+      {
+        "id": "fix_py_30_2",
+        "commit": "ac4b697",
+        "file_path": "mlflow/server/handlers.py",
+        "start_line": 909,
+        "end_line": 939,
+        "snippet": "def _list_artifacts():\n    request_message = _get_request_message(\n        ListArtifacts(),\n        schema={\n            \"run_id\": [_assert_string, _assert_required],\n            \"path\": [_assert_string],\n            \"page_token\": [_assert_string],\n        },\n    )\n    response_message = ListArtifacts.Response()\n    if request_message.HasField(\"path\"):\n        path = request_message.path\n        validate_path_is_safe(path)\n    else:\n        path = None\n    run_id = request_message.run_id or request_message.run_uuid\n    run = _get_tracking_store().get_run(run_id)\n\n    if _is_servable_proxied_run_artifact_root(run.info.artifact_uri):\n        artifact_entities = _list_artifacts_for_proxied_run_artifact_root(\n            proxied_artifact_root=run.info.artifact_uri,\n            relative_path=path,\n        )\n    else:\n        artifact_entities = _get_artifact_repo(run).list_artifacts(path)\n\n    response_message.files.extend([a.to_proto() for a in artifact_entities])\n    response_message.root_uri = run.info.artifact_uri\n    response = Response(mimetype=\"application/json\")\n    response.set_data(message_to_json(response_message))\n    return response"
+      },
+      {
+        "id": "fix_py_30_3",
+        "commit": "ac4b697",
+        "file_path": "mlflow/server/handlers.py",
+        "start_line": 1292,
+        "end_line": 1312,
+        "snippet": "def get_model_version_artifact_handler():\n    from querystring_parser import parser\n\n    query_string = request.query_string.decode(\"utf-8\")\n    request_dict = parser.parse(query_string, normalized=True)\n    name = request_dict.get(\"name\")\n    version = request_dict.get(\"version\")\n    path = request_dict[\"path\"]\n    validate_path_is_safe(path)\n    artifact_uri = _get_model_registry_store().get_model_version_download_uri(name, version)\n    if _is_servable_proxied_run_artifact_root(artifact_uri):\n        artifact_repo = _get_artifact_repo_mlflow_artifacts()\n        artifact_path = _get_proxied_run_artifact_destination_path(\n            proxied_artifact_root=artifact_uri,\n            relative_path=path,\n        )\n    else:\n        artifact_repo = get_artifact_repository(artifact_uri)\n        artifact_path = path\n\n    return _send_artifact(artifact_repo, artifact_path)"
+      },
+      {
+        "id": "fix_py_30_4",
+        "commit": "ac4b697",
+        "file_path": "mlflow/server/handlers.py",
+        "start_line": 530,
+        "end_line": 544,
+        "snippet": "def validate_path_is_safe(path):\n    \"\"\"\n    Validates that the specified path is safe to join with a trusted prefix. This is a security\n    measure to prevent path traversal attacks. The implementation is based on\n    `werkzeug.security.safe_join` (https://github.com/pallets/werkzeug/blob/a3005e6acda7246fe0a684c71921bf4882b4ba1c/src/werkzeug/security.py#L110).\n    \"\"\"\n    if path != \"\":\n        path = posixpath.normpath(path)\n    if (\n        any(sep in path for sep in _os_alt_seps)\n        or os.path.isabs(path)\n        or path == \"..\"\n        or path.startswith(\"../\")\n    ):\n        raise MlflowException(f\"Invalid path: {path}\", error_code=INVALID_PARAMETER_VALUE)"
+      },
+      {
+        "id": "fix_py_30_5",
+        "commit": "ac4b697",
+        "file_path": "mlflow/server/handlers.py",
+        "start_line": 527,
+        "end_line": 527,
+        "snippet": "_os_alt_seps = list(sep for sep in [os.sep, os.path.altsep] if sep is not None and sep != \"/\")"
+      }
+    ],
+    "one_shot": "# Vulnerable Function\n### function vul_py_22\nvulnerable code:\ndef _get_obj_absolute_path(obj_path):\n    return os.path.join(DATAROOT, obj_path)\n\n# Fixed Code\n```json\n[\n  {\n        \"id\": \"vul_py_22\",\n        \"patch\": \"def _get_obj_absolute_path(obj_path):\\n    return safe_join(DATAROOT, obj_path)\"\n    }\n]\n",
+    "one_shot_cot": "# Vulnerable Function\n### function vul_py_22\nvulnerable code:\ndef _get_obj_absolute_path(obj_path):\n    return os.path.join(DATAROOT, obj_path)\n# Root Cause Analysis\nFunction: vul_py_22\nRoot cause analysis: The vulnerability exists because the function directly joins user-controlled input (obj_path) with a base directory (DATAROOT) without any validation or sanitization. This allows for path traversal attacks where an attacker could manipulate obj_path to access files outside the intended DATAROOT directory by including \"../\" sequences or absolute paths.\n\n# Fix Step\nFunction: vul_py_22\nFix steps:\n1. Add input validation to ensure obj_path is a relative path\n2. Normalize the path to remove any traversal sequences\n3. Verify the final path is within the intended DATAROOT directory\n4. Use os.path.abspath and os.path.realpath to properly resolve paths\n5. Raise an exception if the path is invalid or attempts to escape the base directory\n\n# Fixed Code\n```json\n[\n  {\n        \"id\": \"vul_py_22\",\n        \"patch\": \"def _get_obj_absolute_path(obj_path):\\n    return safe_join(DATAROOT, obj_path)\"\n    }\n]",
+    "modification": {
+      "hunk_count": 4,
+      "line_count": 33,
+      "file_count": 1
+    },
+    "is_poc": true
+  },
+  {
+    "cve_id": "CVE-2021-35042",
+    "cwe_id": [
+      "CWE-89"
+    ],
+    "cve_description": "Django 3.1.x before 3.1.13 and 3.2.x before 3.2.5 allows QuerySet.order_by SQL injection if order_by is untrusted input from a client of a web application.",
+    "cwe_info": {
+      "CWE-89": {
+        "name": "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
+        "description": "The product constructs all or part of an SQL command using externally-influenced input from an upstream component, but it does not neutralize or incorrectly neutralizes special elements that could modify the intended SQL command when it is sent to a downstream component. Without sufficient removal or quoting of SQL syntax in user-controllable inputs, the generated SQL query can cause those inputs to be interpreted as SQL instead of ordinary user data."
+      }
+    },
+    "repo": "https://github.com/django/django",
+    "patch_url": [
+      "https://github.com/django/django/commit/0bd57a879a0d54920bb9038a732645fb917040e9",
+      "https://github.com/django/django/commit/dae83a24519d6f284c74414e0b81d64d9b5a0db4",
+      "https://github.com/django/django/commit/a34a5f724c5d5adb2109374ba3989ebb7b11f81f"
+    ],
+    "programming_language": "Python",
+    "vul_func": [
+      {
+        "id": "vul_py_5_1",
+        "commit": "8dc1cc0",
+        "file_path": "django/db/models/sql/query.py",
+        "start_line": 1888,
+        "end_line": 1932,
+        "snippet": "    def add_ordering(self, *ordering):\n        \"\"\"\n        Add items from the 'ordering' sequence to the query's \"order by\"\n        clause. These items are either field names (not column names) --\n        possibly with a direction prefix ('-' or '?') -- or OrderBy\n        expressions.\n\n        If 'ordering' is empty, clear all ordering from the query.\n        \"\"\"\n        errors = []\n        for item in ordering:\n            if isinstance(item, str):\n                if '.' in item:\n                    warnings.warn(\n                        'Passing column raw column aliases to order_by() is '\n                        'deprecated. Wrap %r in a RawSQL expression before '\n                        'passing it to order_by().' % item,\n                        category=RemovedInDjango40Warning,\n                        stacklevel=3,\n                    )\n                    continue\n                if item == '?':\n                    continue\n                if item.startswith('-'):\n                    item = item[1:]\n                if item in self.annotations:\n                    continue\n                if self.extra and item in self.extra:\n                    continue\n                # names_to_path() validates the lookup. A descriptive\n                # FieldError will be raise if it's not.\n                self.names_to_path(item.split(LOOKUP_SEP), self.model._meta)\n            elif not hasattr(item, 'resolve_expression'):\n                errors.append(item)\n            if getattr(item, 'contains_aggregate', False):\n                raise FieldError(\n                    'Using an aggregate in order_by() without also including '\n                    'it in annotate() is not allowed: %s' % item\n                )\n        if errors:\n            raise FieldError('Invalid order_by arguments: %s' % errors)\n        if ordering:\n            self.order_by += ordering\n        else:\n            self.default_ordering = False",
+        "vul_localization": [
+          {
+            "patch_lines": [
+              13
+            ],
+            "tag": "modify"
+          }
+        ]
+      }
+    ],
+    "fix_func": [
+      {
+        "id": "fix_py_5_1",
+        "commit": "0bd57a879a0d54920bb9038a732645fb917040e9",
+        "file_path": "django/db/models/sql/query.py",
+        "start_line": 1890,
+        "end_line": 1934,
+        "snippet": "    def add_ordering(self, *ordering):\n        \"\"\"\n        Add items from the 'ordering' sequence to the query's \"order by\"\n        clause. These items are either field names (not column names) --\n        possibly with a direction prefix ('-' or '?') -- or OrderBy\n        expressions.\n\n        If 'ordering' is empty, clear all ordering from the query.\n        \"\"\"\n        errors = []\n        for item in ordering:\n            if isinstance(item, str):\n                if '.' in item and ORDER_PATTERN.match(item):\n                    warnings.warn(\n                        'Passing column raw column aliases to order_by() is '\n                        'deprecated. Wrap %r in a RawSQL expression before '\n                        'passing it to order_by().' % item,\n                        category=RemovedInDjango40Warning,\n                        stacklevel=3,\n                    )\n                    continue\n                if item == '?':\n                    continue\n                if item.startswith('-'):\n                    item = item[1:]\n                if item in self.annotations:\n                    continue\n                if self.extra and item in self.extra:\n                    continue\n                # names_to_path() validates the lookup. A descriptive\n                # FieldError will be raise if it's not.\n                self.names_to_path(item.split(LOOKUP_SEP), self.model._meta)\n            elif not hasattr(item, 'resolve_expression'):\n                errors.append(item)\n            if getattr(item, 'contains_aggregate', False):\n                raise FieldError(\n                    'Using an aggregate in order_by() without also including '\n                    'it in annotate() is not allowed: %s' % item\n                )\n        if errors:\n            raise FieldError('Invalid order_by arguments: %s' % errors)\n        if ordering:\n            self.order_by += ordering\n        else:\n            self.default_ordering = False"
+      },
+      {
+        "id": "fix_py_5_2",
+        "commit": "0bd57a879a0d54920bb9038a732645fb917040e9",
+        "file_path": "django/db/models/sql/constants.py",
+        "start_line": 22,
+        "end_line": 22,
+        "snippet": "ORDER_PATTERN = _lazy_re_compile(r'[-+]?[.\\w]+$')"
+      }
+    ],
+    "one_shot": "# Vulnerable Function\n### function vul_py_316\nvulnerable code:\ndef get_song_relations(id):\n    top = request.args.get('top')\n    song = Song.query.filter_by(id=id).first()\n    if not song:\n        return route_not_found(song)\n    return make_response(jsonify(song.get_related_songs_json(top)), 200)\n\n# Fixed Code\n```json\n[\n  {\n        \"id\": \"vul_py_316\",\n        \"patch\": \"def get_song_relations(id):\\n    top_str = request.args.get(\\'top\\')\\n    if not top_str.isdigit() or not int(top_str) > 0:\\n        message = \\'top query param must be an int greater than 0\\'\\n        return bad_request(message)\\n    top = int(request.args.get(\\'top\\'))\\n    song = Song.query.filter_by(id=id).first()\\n    if not song:\\n        return route_not_found(song)\\n    return make_response(jsonify(song.get_related_songs_json(top)), 200)\"\n    }\n]\n",
+    "one_shot_cot": "# Vulnerable Function\n### function vul_py_316\nvulnerable code:\ndef get_song_relations(id):\n    top = request.args.get('top')\n    song = Song.query.filter_by(id=id).first()\n    if not song:\n        return route_not_found(song)\n    return make_response(jsonify(song.get_related_songs_json(top)), 200)\n# Root Cause Analysis\nFunction: vul_py_316\nRoot cause analysis: The vulnerability exists in the `get_song_relations` function where the `top` parameter is directly taken from user input (`request.args.get('top')`) and passed into `song.get_related_songs_json()` without any validation or sanitization. This allows for SQL injection attacks where malicious SQL code can be injected through the `top` parameter and executed in the database query.\n\n# Fix Plan\nFunction: vul_py_316\nFix steps:\n1. Add input validation for the `top` parameter to ensure it's a positive integer\n2. Convert the `top` parameter to an integer type to prevent string-based SQL injection\n3. Add error handling for invalid input\n4. Use parameterized queries in the underlying `get_related_songs_json` method (though this should be handled in that method's implementation)\n\n# Fixed Code\n```json\n[\n  {\n        \"id\": \"vul_py_316\",\n        \"patch\": \"def get_song_relations(id):\\n    top_str = request.args.get(\\'top\\')\\n    if not top_str.isdigit() or not int(top_str) > 0:\\n        message = \\'top query param must be an int greater than 0\\'\\n        return bad_request(message)\\n    top = int(request.args.get(\\'top\\'))\\n    song = Song.query.filter_by(id=id).first()\\n    if not song:\\n        return route_not_found(song)\\n    return make_response(jsonify(song.get_related_songs_json(top)), 200)\"\n    }\n]",
+    "modification": {
+      "hunk_count": 2,
+      "line_count": 3,
+      "file_count": 2
+    },
+    "is_poc": true
+  },
+  {
+    "cve_id": "CVE-2015-3295",
+    "cwe_id": [
+      "CWE-284"
+    ],
+    "cve_description": "markdown-it before 4.1.0 does not block data: URLs.",
+    "cwe_info": {
+      "CWE-284": {
+        "name": "Improper Access Control",
+        "description": "The product does not restrict or incorrectly restricts access to a resource from an unauthorized actor."
+      }
+    },
+    "repo": "https://github.com/markdown-it/markdown-it",
+    "patch_url": [
+      "https://github.com/markdown-it/markdown-it/commit/f76d3beb46abd121892a2e2e5c78376354c214e3"
+    ],
+    "programming_language": "JavaScript",
+    "vul_func": [
+      {
+        "id": "vul_js_61_1",
+        "commit": "f7976b2",
+        "file_path": "lib/index.js",
+        "start_line": 24,
+        "end_line": 35,
+        "snippet": "var BAD_PROTOCOLS    = [ 'vbscript', 'javascript', 'file' ];\n\nfunction validateLink(url) {\n  // url should be normalized at this point, and existing entities are decoded\n  //\n  var str = url.trim().toLowerCase();\n\n  if (str.indexOf(':') >= 0 && BAD_PROTOCOLS.indexOf(str.split(':')[0]) >= 0) {\n    return false;\n  }\n  return true;\n}",
+        "vul_localization": [
+          {
+            "patch_lines": [
+              1,
+              7,
+              9
+            ],
+            "tag": "modify"
+          }
+        ]
+      }
+    ],
+    "fix_func": [
+      {
+        "id": "fix_js_61_1",
+        "commit": "f76d3be",
+        "file_path": "lib/index.js",
+        "start_line": 23,
+        "end_line": 53,
+        "snippet": "////////////////////////////////////////////////////////////////////////////////\n//\n// This validator does not pretent to functionality of full weight sanitizers.\n// It's a tradeoff between default security, simplicity and usability.\n// If you need different setup - override validator method as you wish. Or\n// replace it with dummy function and use external sanitizer.\n//\n\nvar BAD_PROTOCOLS      = [ 'vbscript', 'javascript', 'file', 'data' ];\nvar ALLOWED_DATA_MIMES = [\n  'data:image/gif',\n  'data:image/png',\n  'data:image/jpeg',\n  'data:image/webp'\n];\n\nfunction validateLink(url) {\n  // url should be normalized at this point, and existing entities are decoded\n\n  var str      = url.trim().toLowerCase(),\n      protocol = str.split(':')[0];\n\n  if (str.indexOf(':') >= 0 && BAD_PROTOCOLS.indexOf(protocol) >= 0) {\n    if (protocol === 'data' && ALLOWED_DATA_MIMES.indexOf(str.split(';')[0]) >= 0) {\n      return true;\n    }\n    return false;\n  }\n\n  return true;\n}"
+      }
+    ],
+    "one_shot": "# Vulnerable Function\n### function vul_js_271\nvulnerable code:\nwindow.onpageshow=function(event) {\n\t/**\n\t * Same as above for Safari (does not execute Javascript on history back)\n\t * persisted indicates if the document is loading from a cache (not reliable)\n\t *\n\t * @link https://web.dev/bfcache/\n\t */\n\tif (event.persisted\n\t\t|| window.performance && (performance.navigation.type == 2\n\t\t\t|| (performance.getEntriesByType\n\t\t\t\t&& performance.getEntriesByType(\"navigation\")[0]\n\t\t\t\t&& performance.getEntriesByType(\"navigation\")[0].type === 'back_forward'))) {\n\t\tlocation.reload();\n\t}\n};\n\n# Fixed Code\n```json\n[\n  {\n        \"id\": \"vul_js_271\",\n        \"patch\": \"window.onpageshow=function(event) {\\n\\tbrowserHistoryCacheBuster(event);\\n};\"\n    }\n]\n",
+    "one_shot_cot": "# Vulnerable Function\n### function vul_js_271\nvulnerable code:\nwindow.onpageshow=function(event) {\n\t/**\n\t * Same as above for Safari (does not execute Javascript on history back)\n\t * persisted indicates if the document is loading from a cache (not reliable)\n\t *\n\t * @link https://web.dev/bfcache/\n\t */\n\tif (event.persisted\n\t\t|| window.performance && (performance.navigation.type == 2\n\t\t\t|| (performance.getEntriesByType\n\t\t\t\t&& performance.getEntriesByType(\"navigation\")[0]\n\t\t\t\t&& performance.getEntriesByType(\"navigation\")[0].type === 'back_forward'))) {\n\t\tlocation.reload();\n\t}\n};\nHere's the analysis and fix for the vulnerability:\n\n# Root Cause Analysis\nFunction: vul_js_271\nRoot cause: The vulnerability stems from improper access control in the page reload mechanism. The current implementation blindly reloads the page when certain navigation conditions are met, without verifying if the user has proper authorization to access the content after reload. This could potentially allow unauthorized access to cached sensitive information when navigating back/forward.\n\n# Fix Step\nFunction: vul_js_271\nFix steps:\n1. Add authorization check before reloading the page\n2. Maintain the same functionality for authorized users\n3. Keep the existing navigation detection logic but add security validation\n4. For unauthorized cases, redirect to a safe location instead of reloading\n5. Preserve all original comments and structure\n\n# Fixed Code\n```json\n[\n  {\n        \"id\": \"vul_js_271\",\n        \"patch\": \"window.onpageshow=function(event) {\\n\\tbrowserHistoryCacheBuster(event);\\n};\"\n    }\n]",
+    "modification": {
+      "hunk_count": 1,
+      "line_count": 27,
+      "file_count": 1
+    },
+    "is_poc": true
+  },
+  {
+    "cve_id": "CVE-2021-32803",
+    "cwe_id": [
+      "CWE-59"
+    ],
+    "cve_description": "The npm package \"tar\" (aka node-tar) before versions 6.1.2, 5.0.7, 4.4.15, and 3.2.3 has an arbitrary File Creation/Overwrite vulnerability via insufficient symlink protection. `node-tar` aims to guarantee that any file whose location would be modified by a symbolic link is not extracted. This is, in part, achieved by ensuring that extracted directories are not symlinks. Additionally, in order to prevent unnecessary `stat` calls to determine whether a given path is a directory, paths are cached when directories are created. This logic was insufficient when extracting tar files that contained both a directory and a symlink with the same name as the directory. This order of operations resulted in the directory being created and added to the `node-tar` directory cache. When a directory is present in the directory cache, subsequent calls to mkdir for that directory are skipped. However, this is also where `node-tar` checks for symlinks occur. By first creating a directory, and then replacing that directory with a symlink, it was thus possible to bypass `node-tar` symlink checks on directories, essentially allowing an untrusted tar file to symlink into an arbitrary location and subsequently extracting arbitrary files into that location, thus allowing arbitrary file creation and overwrite. This issue was addressed in releases 3.2.3, 4.4.15, 5.0.7 and 6.1.2.",
+    "cwe_info": {
+      "CWE-59": {
+        "name": "Improper Link Resolution Before File Access ('Link Following')",
+        "description": "The product attempts to access a file based on the filename, but it does not properly prevent that filename from identifying a link or shortcut that resolves to an unintended resource."
+      }
+    },
+    "repo": "https://github.com/npm/node-tar",
+    "patch_url": [
+      "https://github.com/npm/node-tar/commit/9dbdeb6df8e9dbd96fa9e84341b9d74734be6c20"
+    ],
+    "programming_language": "JavaScript",
+    "vul_func": [
+      {
+        "id": "vul_js_47_1",
+        "commit": "df3aa4d",
+        "file_path": "lib/unpack.js",
+        "start_line": 415,
+        "end_line": 437,
+        "snippet": "  [CHECKFS] (entry) {\n    this[PEND]()\n    this[MKDIR](path.dirname(entry.absolute), this.dmode, er => {\n      if (er)\n        return this[ONERROR](er, entry)\n      fs.lstat(entry.absolute, (er, st) => {\n        if (st && (this.keep || this.newer && st.mtime > entry.mtime))\n          this[SKIP](entry)\n        else if (er || this[ISREUSABLE](entry, st))\n          this[MAKEFS](null, entry)\n        else if (st.isDirectory()) {\n          if (entry.type === 'Directory') {\n            if (!entry.mode || (st.mode & 0o7777) === entry.mode)\n              this[MAKEFS](null, entry)\n            else\n              fs.chmod(entry.absolute, entry.mode, er => this[MAKEFS](er, entry))\n          } else\n            fs.rmdir(entry.absolute, er => this[MAKEFS](er, entry))\n        } else\n          unlinkFile(entry.absolute, er => this[MAKEFS](er, entry))\n      })\n    })\n  }",
+        "vul_localization": [
+          {
+            "patch_lines": [
+              2
+            ],
+            "tag": "add"
+          }
+        ]
+      },
+      {
+        "id": "vul_js_47_2",
+        "commit": "df3aa4d",
+        "file_path": "lib/unpack.js",
+        "start_line": 477,
+        "end_line": 505,
+        "snippet": "  [CHECKFS] (entry) {\n    const er = this[MKDIR](path.dirname(entry.absolute), this.dmode)\n    if (er)\n      return this[ONERROR](er, entry)\n    try {\n      const st = fs.lstatSync(entry.absolute)\n      if (this.keep || this.newer && st.mtime > entry.mtime)\n        return this[SKIP](entry)\n      else if (this[ISREUSABLE](entry, st))\n        return this[MAKEFS](null, entry)\n      else {\n        try {\n          if (st.isDirectory()) {\n            if (entry.type === 'Directory') {\n              if (entry.mode && (st.mode & 0o7777) !== entry.mode)\n                fs.chmodSync(entry.absolute, entry.mode)\n            } else\n              fs.rmdirSync(entry.absolute)\n          } else\n            unlinkFileSync(entry.absolute)\n          return this[MAKEFS](null, entry)\n        } catch (er) {\n          return this[ONERROR](er, entry)\n        }\n      }\n    } catch (er) {\n      return this[MAKEFS](null, entry)\n    }\n  }",
+        "vul_localization": [
+          {
+            "patch_lines": [
+              1
+            ],
+            "tag": "add"
+          }
+        ]
+      }
+    ],
+    "fix_func": [
+      {
+        "id": "fix_js_47_1",
+        "commit": "46fe350",
+        "file_path": "lib/unpack.js",
+        "start_line": 415,
+        "end_line": 451,
+        "snippet": "  [CHECKFS] (entry) {\n    this[PEND]()\n\n    // if we are not creating a directory, and the path is in the dirCache,\n    // then that means we are about to delete the directory we created\n    // previously, and it is no longer going to be a directory, and neither\n    // is any of its children.\n    if (entry.type !== 'Directory') {\n      for (const path of this.dirCache.keys()) {\n        if (path === entry.absolute ||\n            path.indexOf(entry.absolute + '/') === 0 ||\n            path.indexOf(entry.absolute + '\\\\') === 0)\n          this.dirCache.delete(path)\n      }\n    }\n\n    this[MKDIR](path.dirname(entry.absolute), this.dmode, er => {\n      if (er)\n        return this[ONERROR](er, entry)\n      fs.lstat(entry.absolute, (er, st) => {\n        if (st && (this.keep || this.newer && st.mtime > entry.mtime))\n          this[SKIP](entry)\n        else if (er || this[ISREUSABLE](entry, st))\n          this[MAKEFS](null, entry)\n        else if (st.isDirectory()) {\n          if (entry.type === 'Directory') {\n            if (!entry.mode || (st.mode & 0o7777) === entry.mode)\n              this[MAKEFS](null, entry)\n            else\n              fs.chmod(entry.absolute, entry.mode, er => this[MAKEFS](er, entry))\n          } else\n            fs.rmdir(entry.absolute, er => this[MAKEFS](er, entry))\n        } else\n          unlinkFile(entry.absolute, er => this[MAKEFS](er, entry))\n      })\n    })\n  }"
+      },
+      {
+        "id": "fix_js_47_2",
+        "commit": "46fe350",
+        "file_path": "lib/unpack.js",
+        "start_line": 491,
+        "end_line": 528,
+        "snippet": "  [CHECKFS] (entry) {\n    if (entry.type !== 'Directory') {\n      for (const path of this.dirCache.keys()) {\n        if (path === entry.absolute ||\n            path.indexOf(entry.absolute + '/') === 0 ||\n            path.indexOf(entry.absolute + '\\\\') === 0)\n          this.dirCache.delete(path)\n      }\n    }\n\n    const er = this[MKDIR](path.dirname(entry.absolute), this.dmode)\n    if (er)\n      return this[ONERROR](er, entry)\n    try {\n      const st = fs.lstatSync(entry.absolute)\n      if (this.keep || this.newer && st.mtime > entry.mtime)\n        return this[SKIP](entry)\n      else if (this[ISREUSABLE](entry, st))\n        return this[MAKEFS](null, entry)\n      else {\n        try {\n          if (st.isDirectory()) {\n            if (entry.type === 'Directory') {\n              if (entry.mode && (st.mode & 0o7777) !== entry.mode)\n                fs.chmodSync(entry.absolute, entry.mode)\n            } else\n              fs.rmdirSync(entry.absolute)\n          } else\n            unlinkFileSync(entry.absolute)\n          return this[MAKEFS](null, entry)\n        } catch (er) {\n          return this[ONERROR](er, entry)\n        }\n      }\n    } catch (er) {\n      return this[MAKEFS](null, entry)\n    }\n  }"
+      }
+    ],
+    "one_shot": "# Vulnerable Function\n### function vul_js_212\nvulnerable code:\n  function statCb (er, current) {\n    if (self.filter && !self.filter.call(who, who, current)) {\n      self._aborted = true\n      self.emit('end')\n      self.emit('close')\n      return\n    }\n\n    // if it's not there, great.  We'll just create it.\n    // if it is there, then we'll need to change whatever differs\n    if (er || !current) {\n      return create(self)\n    }\n\n    self._old = current\n    var currentType = getType(current)\n\n    // if it's a type change, then we need to clobber or error.\n    // if it's not a type change, then let the impl take care of it.\n    if (currentType !== self.type) {\n      return rimraf(self._path, function (er) {\n        if (er) return self.error(er)\n        self._old = null\n        create(self)\n      })\n    }\n\n    // otherwise, just handle in the app-specific way\n    // this creates a fs.WriteStream, or mkdir's, or whatever\n    create(self)\n  }\n}\n\n# Fixed Code\n```json\n[\n  {\n        \"id\": \"vul_js_212\",\n        \"patch\": \"  function statCb (er, current) {\\n    if (self.filter && !self.filter.call(who, who, current)) {\\n      self._aborted = true\\n      self.emit('end')\\n      self.emit('close')\\n      return\\n    }\\n\\n    // if it's not there, great.  We'll just create it.\\n    // if it is there, then we'll need to change whatever differs\\n    if (er || !current) {\\n      return create(self)\\n    }\\n\\n    self._old = current\\n    var currentType = getType(current)\\n\\n    // if it's a type change, then we need to clobber or error.\\n    // if it's not a type change, then let the impl take care of it.\\n    if (currentType !== self.type || self.type === 'File' && current.nlink > 1) {\\n      return rimraf(self._path, function (er) {\\n        if (er) return self.error(er)\\n        self._old = null\\n        create(self)\\n      })\\n    }\\n\\n    // otherwise, just handle in the app-specific way\\n    // this creates a fs.WriteStream, or mkdir's, or whatever\\n    create(self)\\n  }\\n}\"\n    }\n]\n",
+    "one_shot_cot": "# Vulnerable Function\n### function vul_js_212\nvulnerable code:\n  function statCb (er, current) {\n    if (self.filter && !self.filter.call(who, who, current)) {\n      self._aborted = true\n      self.emit('end')\n      self.emit('close')\n      return\n    }\n\n    // if it's not there, great.  We'll just create it.\n    // if it is there, then we'll need to change whatever differs\n    if (er || !current) {\n      return create(self)\n    }\n\n    self._old = current\n    var currentType = getType(current)\n\n    // if it's a type change, then we need to clobber or error.\n    // if it's not a type change, then let the impl take care of it.\n    if (currentType !== self.type) {\n      return rimraf(self._path, function (er) {\n        if (er) return self.error(er)\n        self._old = null\n        create(self)\n      })\n    }\n\n    // otherwise, just handle in the app-specific way\n    // this creates a fs.WriteStream, or mkdir's, or whatever\n    create(self)\n  }\n}\n# Root Cause Analysis\nFunction: vul_js_212\nRoot cause analysis: The vulnerability occurs in the statCb function which handles file operations. The function fails to properly validate and resolve symbolic links before performing file operations. When processing tarballs containing hardlinks, it can be tricked into overwriting existing system files because it doesn't properly check whether the target path is a hardlink or symbolic link that could point to sensitive system files. The fundamental issue is the lack of proper link resolution and validation before file creation or modification.\n\n# Fix Plan\nFunction: vul_js_212\nFix steps:\n1. Add link resolution check before file operations\n2. Implement proper validation to prevent following malicious links\n3. Add security checks to verify the target path is safe before writing\n4. Maintain existing functionality while adding these security measures\n5. Preserve the original error handling and event emission behavior\n\n# Fixed Code\n```json\n[\n  {\n        \"id\": \"vul_js_212\",\n        \"patch\": \"  function statCb (er, current) {\\n    if (self.filter && !self.filter.call(who, who, current)) {\\n      self._aborted = true\\n      self.emit('end')\\n      self.emit('close')\\n      return\\n    }\\n\\n    // if it's not there, great.  We'll just create it.\\n    // if it is there, then we'll need to change whatever differs\\n    if (er || !current) {\\n      return create(self)\\n    }\\n\\n    self._old = current\\n    var currentType = getType(current)\\n\\n    // if it's a type change, then we need to clobber or error.\\n    // if it's not a type change, then let the impl take care of it.\\n    if (currentType !== self.type || self.type === 'File' && current.nlink > 1) {\\n      return rimraf(self._path, function (er) {\\n        if (er) return self.error(er)\\n        self._old = null\\n        create(self)\\n      })\\n    }\\n\\n    // otherwise, just handle in the app-specific way\\n    // this creates a fs.WriteStream, or mkdir's, or whatever\\n    create(self)\\n  }\\n}\"\n    }\n]",
+    "modification": {
+      "hunk_count": 2,
+      "line_count": 25,
+      "file_count": 1
+    },
+    "is_poc": true
+  }
+]

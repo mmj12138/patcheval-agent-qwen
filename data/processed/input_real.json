@@ -1,0 +1,622 @@
+[
+  {
+    "cve_id": "CVE-2024-7009",
+    "cve_description": "Unsanitized user-input in Calibre <= 7.15.0 allow users with permissions to perform full-text searches to achieve SQL injection on the SQLite database.",
+    "cwe_info": {
+      "CWE-89": {
+        "name": "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
+        "description": "The product constructs all or part of an SQL command using externally-influenced input from an upstream component, but it does not neutralize or incorrectly neutralizes special elements that could modify the intended SQL command when it is sent to a downstream component. Without sufficient removal or quoting of SQL syntax in user-controllable inputs, the generated SQL query can cause those inputs to be interpreted as SQL instead of ordinary user data."
+      }
+    },
+    "repo": "https://github.com/kovidgoyal/calibre",
+    "patch_url": [
+      "https://github.com/kovidgoyal/calibre/commit/d56574285e8859d3d715eb7829784ee74337b7d7"
+    ],
+    "programming_language": "Python",
+    "vul_func": [
+      {
+        "id": "vul_py_173_1",
+        "commit": "bcd0ab1",
+        "file_path": "src/calibre/db/backend.py",
+        "start_line": 2361,
+        "end_line": 2408,
+        "snippet": "    def search_annotations(self,\n        fts_engine_query, use_stemming, highlight_start, highlight_end, snippet_size, annotation_type,\n        restrict_to_book_ids, restrict_to_user, ignore_removed=False\n    ):\n        fts_engine_query = unicode_normalize(fts_engine_query)\n        fts_table = 'annotations_fts_stemmed' if use_stemming else 'annotations_fts'\n        text = 'annotations.searchable_text'\n        if highlight_start is not None and highlight_end is not None:\n            if snippet_size is not None:\n                text = \"snippet({fts_table}, 0, '{highlight_start}', '{highlight_end}', '\\u2026', {snippet_size})\".format(\n                        fts_table=fts_table, highlight_start=highlight_start, highlight_end=highlight_end,\n                        snippet_size=max(1, min(snippet_size, 64)))\n            else:\n                text = f\"highlight({fts_table}, 0, '{highlight_start}', '{highlight_end}')\"\n        query = 'SELECT {0}.id, {0}.book, {0}.format, {0}.user_type, {0}.user, {0}.annot_data, {1} FROM {0} '\n        query = query.format('annotations', text)\n        query += ' JOIN {fts_table} ON annotations.id = {fts_table}.rowid'.format(fts_table=fts_table)\n        query += f' WHERE {fts_table} MATCH ?'\n        data = [fts_engine_query]\n        if restrict_to_user:\n            query += ' AND annotations.user_type = ? AND annotations.user = ?'\n            data += list(restrict_to_user)\n        if annotation_type:\n            query += ' AND annotations.annot_type = ? '\n            data.append(annotation_type)\n        query += f' ORDER BY {fts_table}.rank '\n        ls = json.loads\n        try:\n            for (rowid, book_id, fmt, user_type, user, annot_data, text) in self.execute(query, tuple(data)):\n                if restrict_to_book_ids is not None and book_id not in restrict_to_book_ids:\n                    continue\n                try:\n                    parsed_annot = ls(annot_data)\n                except Exception:\n                    continue\n                if ignore_removed and parsed_annot.get('removed'):\n                    continue\n                yield {\n                    'id': rowid,\n                    'book_id': book_id,\n                    'format': fmt,\n                    'user_type': user_type,\n                    'user': user,\n                    'text': text,\n                    'annotation': parsed_annot,\n                }\n        except apsw.SQLError as e:\n            raise FTSQueryError(fts_engine_query, query, e)"
+      },
+      {
+        "id": "vul_py_173_2",
+        "commit": "bcd0ab1",
+        "file_path": "src/calibre/db/fts/connect.py",
+        "start_line": 151,
+        "end_line": 199,
+        "snippet": "    def search(self,\n        fts_engine_query, use_stemming, highlight_start, highlight_end, snippet_size, restrict_to_book_ids,\n        return_text=True, process_each_result=None\n    ):\n        if restrict_to_book_ids is not None and not restrict_to_book_ids:\n            return\n        fts_engine_query = unicode_normalize(fts_engine_query)\n        fts_table = 'books_fts' + ('_stemmed' if use_stemming else '')\n        if return_text:\n            text = 'books_text.searchable_text'\n            if highlight_start is not None and highlight_end is not None:\n                if snippet_size is not None:\n                    text = f'''snippet(\"{fts_table}\", 0, '{highlight_start}', '{highlight_end}', '\\u2026', {max(1, min(snippet_size, 64))})'''\n                else:\n                    text = f'''highlight(\"{fts_table}\", 0, '{highlight_start}', '{highlight_end}')'''\n            text = ', ' + text\n        else:\n            text = ''\n        query = 'SELECT {0}.id, {0}.book, {0}.format {1} FROM {0} '.format('books_text', text)\n        query += f' JOIN {fts_table} ON fts_db.books_text.id = {fts_table}.rowid'\n        query += ' WHERE '\n        data = []\n        conn = self.get_connection()\n        temp_table_name = ''\n        if restrict_to_book_ids:\n            temp_table_name = f'fts_restrict_search_{next(self.temp_table_counter)}'\n            conn.execute(f'CREATE TABLE temp.{temp_table_name}(x INTEGER)')\n            conn.executemany(f'INSERT INTO temp.{temp_table_name} VALUES (?)', tuple((x,) for x in restrict_to_book_ids))\n            query += f' fts_db.books_text.book IN temp.{temp_table_name} AND '\n        query += f' \"{fts_table}\" MATCH ?'\n        data.append(fts_engine_query)\n        query += f' ORDER BY {fts_table}.rank '\n        if temp_table_name:\n            query += f'; DROP TABLE temp.{temp_table_name}'\n        try:\n            for record in conn.execute(query, tuple(data)):\n                result = {\n                    'id': record[0],\n                    'book_id': record[1],\n                    'format': record[2],\n                    'text': record[3] if return_text else '',\n                }\n                if process_each_result is not None:\n                    result = process_each_result(result)\n                ret = yield result\n                if ret is True:\n                    break\n        except apsw.SQLError as e:\n            raise FTSQueryError(fts_engine_query, query, e) from e"
+      },
+      {
+        "id": "vul_py_173_3",
+        "commit": "bcd0ab1",
+        "file_path": "src/calibre/db/notes/connect.py",
+        "start_line": 406,
+        "end_line": 449,
+        "snippet": "    def search(self,\n        conn, fts_engine_query, use_stemming, highlight_start, highlight_end, snippet_size, restrict_to_fields=(),\n        return_text=True, process_each_result=None, limit=None\n    ):\n        if not fts_engine_query:\n            yield from self.all_notes(\n                conn, restrict_to_fields, limit=limit, snippet_size=snippet_size, return_text=return_text, process_each_result=process_each_result)\n            return\n        fts_engine_query = unicode_normalize(fts_engine_query)\n        fts_table = 'notes_fts' + ('_stemmed' if use_stemming else '')\n        if return_text:\n            text = 'notes.searchable_text'\n            if highlight_start is not None and highlight_end is not None:\n                if snippet_size is not None:\n                    text = f'''snippet(\"{fts_table}\", 0, '{highlight_start}', '{highlight_end}', '\\u2026', {max(1, min(snippet_size, 64))})'''\n                else:\n                    text = f'''highlight(\"{fts_table}\", 0, '{highlight_start}', '{highlight_end}')'''\n            text = ', ' + text\n        else:\n            text = ''\n        query = 'SELECT {0}.id, {0}.colname, {0}.item {1} FROM {0} '.format('notes', text)\n        query += f' JOIN {fts_table} ON notes_db.notes.id = {fts_table}.rowid'\n        query += ' WHERE '\n        if restrict_to_fields:\n            query += ' notes_db.notes.colname IN ({}) AND '.format(','.join(repeat('?', len(restrict_to_fields))))\n        query += f' \"{fts_table}\" MATCH ?'\n        query += f' ORDER BY {fts_table}.rank '\n        if limit is not None:\n            query += f' LIMIT {limit}'\n        try:\n            for record in conn.execute(query, restrict_to_fields+(fts_engine_query,)):\n                result = {\n                    'id': record[0],\n                    'field': record[1],\n                    'item_id': record[2],\n                    'text': record[3] if return_text else '',\n                }\n                if process_each_result is not None:\n                    result = process_each_result(result)\n                ret = yield result\n                if ret is True:\n                    break\n        except apsw.SQLError as e:\n            raise FTSQueryError(fts_engine_query, query, e) from e"
+      }
+    ]
+  },
+  {
+    "cve_id": "CVE-2024-22419",
+    "cve_description": "Vyper is a Pythonic Smart Contract Language for the Ethereum Virtual Machine. The `concat` built-in can write over the bounds of the memory buffer that was allocated for it and thus overwrite existing valid data. The root cause is that the `build_IR` for `concat` doesn't properly adhere to the API of copy functions (for `>=0.3.2` the `copy_bytes` function). A contract search was performed and no vulnerable contracts were found in production. The buffer overflow can result in the change of semantics of the contract. The overflow is length-dependent and thus it might go unnoticed during contract testing. However, certainly not all usages of concat will result in overwritten valid data as we require it to be in an internal function and close to the return statement where other memory allocations don't occur. This issue has been addressed in 0.4.0.",
+    "cwe_info": {
+      "CWE-787": {
+        "name": "Out-of-bounds Write",
+        "description": "The product writes data past the end, or before the beginning, of the intended buffer."
+      }
+    },
+    "repo": "https://github.com/vyperlang/vyper",
+    "patch_url": [
+      "https://github.com/vyperlang/vyper/commit/55e18f6d128b2da8986adbbcccf1cd59a4b9ad6f"
+    ],
+    "programming_language": "Python",
+    "vul_func": [
+      {
+        "id": "vul_py_429_1",
+        "commit": "56b0d4f",
+        "file_path": "vyper/builtins/functions.py",
+        "start_line": 530,
+        "end_line": 589,
+        "snippet": "    def build_IR(self, expr, context):\n        args = [Expr(arg, context).ir_node for arg in expr.args]\n        if len(args) < 2:\n            raise StructureException(\"Concat expects at least two arguments\", expr)\n\n        # Maximum length of the output\n        dst_maxlen = sum(\n            [arg.typ.maxlen if isinstance(arg.typ, _BytestringT) else arg.typ.m for arg in args]\n        )\n\n        # TODO: try to grab these from semantic analysis\n        if isinstance(args[0].typ, StringT):\n            ret_typ = StringT(dst_maxlen)\n        else:\n            ret_typ = BytesT(dst_maxlen)\n\n        # Node representing the position of the output in memory\n        dst = IRnode.from_list(\n            context.new_internal_variable(ret_typ),\n            typ=ret_typ,\n            location=MEMORY,\n            annotation=\"concat destination\",\n        )\n\n        ret = [\"seq\"]\n        # stack item representing our current offset in the dst buffer\n        ofst = \"concat_ofst\"\n\n        # TODO: optimize for the case where all lengths are statically known.\n        for arg in args:\n            dst_data = add_ofst(bytes_data_ptr(dst), ofst)\n\n            if isinstance(arg.typ, _BytestringT):\n                # Ignore empty strings\n                if arg.typ.maxlen == 0:\n                    continue\n\n                with arg.cache_when_complex(\"arg\") as (b1, arg):\n                    argdata = bytes_data_ptr(arg)\n\n                    with get_bytearray_length(arg).cache_when_complex(\"len\") as (b2, arglen):\n                        do_copy = [\n                            \"seq\",\n                            copy_bytes(dst_data, argdata, arglen, arg.typ.maxlen),\n                            [\"set\", ofst, [\"add\", ofst, arglen]],\n                        ]\n                        ret.append(b1.resolve(b2.resolve(do_copy)))\n\n            else:\n                ret.append(STORE(dst_data, unwrap_location(arg)))\n                ret.append([\"set\", ofst, [\"add\", ofst, arg.typ.m]])\n\n        ret.append(STORE(dst, ofst))\n\n        # Memory location of the output\n        ret.append(dst)\n\n        return IRnode.from_list(\n            [\"with\", ofst, 0, ret], typ=ret_typ, location=MEMORY, annotation=\"concat\"\n        )"
+      }
+    ]
+  },
+  {
+    "cve_id": "CVE-2022-4720",
+    "cve_description": "Open Redirect in GitHub repository ikus060/rdiffweb prior to 2.5.5.",
+    "cwe_info": {
+      "CWE-601": {
+        "name": "URL Redirection to Untrusted Site ('Open Redirect')",
+        "description": "The web application accepts a user-controlled input that specifies a link to an external site, and uses that link in a redirect."
+      }
+    },
+    "repo": "https://github.com/ikus060/rdiffweb",
+    "patch_url": [
+      "https://github.com/ikus060/rdiffweb/commit/6afaae56a29536f0118b3380d296c416aa6d078d"
+    ],
+    "programming_language": "Python",
+    "vul_func": [
+      {
+        "id": "vul_py_147_1",
+        "commit": "b0c1422",
+        "file_path": "rdiffweb/core/notification.py",
+        "start_line": 66,
+        "end_line": 78,
+        "snippet": "    def access_token_added(self, userobj, name):\n        if not self.send_changed:\n            return\n\n        if not userobj.email:\n            logger.info(\"can't sent mail to user [%s] without an email\", userobj.username)\n            return\n\n        # Send a mail notification\n        body = self.app.templates.compile_template(\n            \"access_token_added.html\", **{\"header_name\": self.app.cfg.header_name, 'user': userobj, 'name': name}\n        )\n        self.bus.publish('queue_mail', to=userobj.email, subject=_(\"A new access token has been created\"), message=body)"
+      },
+      {
+        "id": "vul_py_147_2",
+        "commit": "b0c1422",
+        "file_path": "rdiffweb/core/notification.py",
+        "start_line": 111,
+        "end_line": 123,
+        "snippet": "    def user_password_changed(self, userobj):\n        if not self.send_changed:\n            return\n\n        if not userobj.email:\n            logger.info(\"can't sent mail to user [%s] without an email\", userobj.username)\n            return\n\n        # If the email attributes was changed, send a mail notification.\n        body = self.app.templates.compile_template(\n            \"password_changed.html\", **{\"header_name\": self.app.cfg.header_name, 'user': userobj}\n        )\n        self.bus.publish('queue_mail', to=userobj.email, subject=_(\"Password changed\"), message=body)"
+      }
+    ]
+  },
+  {
+    "cve_id": "CVE-2023-4033",
+    "cve_description": "OS Command Injection in GitHub repository mlflow/mlflow prior to 2.6.0.",
+    "cwe_info": {
+      "CWE-94": {
+        "name": "Improper Control of Generation of Code ('Code Injection')",
+        "description": "The product constructs all or part of a code segment using externally-influenced input from an upstream component, but it does not neutralize or incorrectly neutralizes special elements that could modify the syntax or behavior of the intended code segment."
+      },
+      "CWE-77": {
+        "name": "Improper Neutralization of Special Elements used in a Command ('Command Injection')",
+        "description": "The product constructs all or part of a command using externally-influenced input from an upstream component, but it does not neutralize or incorrectly neutralizes special elements that could modify the intended command when it is sent to a downstream component."
+      },
+      "CWE-78": {
+        "name": "Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')",
+        "description": "The product constructs all or part of an OS command using externally-influenced input from an upstream component, but it does not neutralize or incorrectly neutralizes special elements that could modify the intended OS command when it is sent to a downstream component."
+      }
+    },
+    "repo": "https://github.com/mlflow/mlflow",
+    "patch_url": [
+      "https://github.com/mlflow/mlflow/commit/6dde93758d42455cb90ef324407919ed67668b9b"
+    ],
+    "programming_language": "Python",
+    "vul_func": [
+      {
+        "id": "vul_py_235_1",
+        "commit": "330bf0b",
+        "file_path": "mlflow/pyfunc/backend.py",
+        "start_line": 134,
+        "end_line": 161,
+        "snippet": "    def predict(self, model_uri, input_path, output_path, content_type):\n        \"\"\"\n        Generate predictions using generic python model saved with MLflow. The expected format of\n        the input JSON is the Mlflow scoring format.\n        Return the prediction results as a JSON.\n        \"\"\"\n        local_path = _download_artifact_from_uri(model_uri)\n        # NB: Absolute windows paths do not work with mlflow apis, use file uri to ensure\n        # platform compatibility.\n        local_uri = path_to_local_file_uri(local_path)\n\n        if self._env_manager != _EnvManager.LOCAL:\n            command = (\n                'python -c \"from mlflow.pyfunc.scoring_server import _predict; _predict('\n                \"model_uri={model_uri}, \"\n                \"input_path={input_path}, \"\n                \"output_path={output_path}, \"\n                \"content_type={content_type})\"\n                '\"'\n            ).format(\n                model_uri=repr(local_uri),\n                input_path=repr(input_path),\n                output_path=repr(output_path),\n                content_type=repr(content_type),\n            )\n            return self.prepare_env(local_path).execute(command)\n        else:\n            scoring_server._predict(local_uri, input_path, output_path, content_type)"
+      },
+      {
+        "id": "vul_py_235_2",
+        "commit": "330bf0b",
+        "file_path": "mlflow/pyfunc/backend.py",
+        "start_line": 326,
+        "end_line": 363,
+        "snippet": "            setup_pyenv_and_virtualenv=setup_pyenv_and_virtualenv,\n            install_mlflow=install_mlflow,\n            custom_setup_steps=custom_setup_steps,\n            entrypoint=pyfunc_entrypoint,\n        )\n        _logger.debug(\"generated dockerfile text\", extra={\"dockerfile\": dockerfile_text})\n\n        with open(os.path.join(output_path, \"Dockerfile\"), \"w\") as dockerfile:\n            dockerfile.write(dockerfile_text)\n\n    def build_image(\n        self, model_uri, image_name, install_mlflow=False, mlflow_home=None, enable_mlserver=False\n    ):\n        copy_model_into_container = self.copy_model_into_container_wrapper(\n            model_uri, install_mlflow, enable_mlserver\n        )\n        pyfunc_entrypoint = _pyfunc_entrypoint(\n            self._env_manager, model_uri, install_mlflow, enable_mlserver\n        )\n        _build_image(\n            image_name=image_name,\n            mlflow_home=mlflow_home,\n            env_manager=self._env_manager,\n            custom_setup_steps_hook=copy_model_into_container,\n            entrypoint=pyfunc_entrypoint,\n        )\n\n    def copy_model_into_container_wrapper(self, model_uri, install_mlflow, enable_mlserver):\n        def copy_model_into_container(dockerfile_context_dir):\n            # This function have to be included in another,\n            # since `_build_image` function in `docker_utils` accepts only\n            # single-argument function like this\n            model_cwd = os.path.join(dockerfile_context_dir, \"model_dir\")\n            pathlib.Path(model_cwd).mkdir(parents=True, exist_ok=True)\n            if model_uri:\n                model_path = _download_artifact_from_uri(model_uri, output_path=model_cwd)\n                return \"\"\"\n                    COPY {model_dir} /opt/ml/model"
+      }
+    ]
+  },
+  {
+    "cve_id": "CVE-2022-33146",
+    "cve_description": "Open redirect vulnerability in web2py versions prior to 2.22.5 allows a remote attacker to redirect a user to an arbitrary web site and conduct a phishing attack by having a user to access a specially crafted URL.",
+    "cwe_info": {
+      "CWE-601": {
+        "name": "URL Redirection to Untrusted Site ('Open Redirect')",
+        "description": "The web application accepts a user-controlled input that specifies a link to an external site, and uses that link in a redirect."
+      }
+    },
+    "repo": "https://github.com/web2py/web2py",
+    "patch_url": [
+      "https://github.com/web2py/web2py/commit/a181b855a43cb8b479d276b082cfcde385768451",
+      "https://github.com/web2py/web2py/commit/d9805606f88f00c0be56438247605cefde73e14e#diff-c1d01f37ee54d813815718760b9c4d7b274e2be7ad18f65552cd564336ab593bR110"
+    ],
+    "programming_language": "Python",
+    "vul_func": [
+      {
+        "id": "vul_py_365_1",
+        "commit": "842994def40ca565aa954a13aa065d2da1090948",
+        "file_path": "applications/admin/controllers/default.py",
+        "start_line": 118,
+        "end_line": 157,
+        "snippet": "def index():\n    \"\"\" Index handler \"\"\"\n\n    send = request.vars.send\n    if DEMO_MODE:\n        session.authorized = True\n        session.last_time = t0\n    if not send:\n        send = URL('site')\n    if session.authorized:\n        redirect(send)\n    elif failed_login_count() >= allowed_number_of_attempts:\n        time.sleep(2 ** allowed_number_of_attempts)\n        raise HTTP(403)\n    elif request.vars.password:\n        if verify_password(request.vars.password[:1024]):\n            session.authorized = True\n            login_record(True)\n\n            if CHECK_VERSION:\n                session.check_version = True\n            else:\n                session.check_version = False\n\n            session.last_time = t0\n            if isinstance(send, list):  # ## why does this happen?\n                send = str(send[0])\n\n            redirect(send)\n        else:\n            times_denied = login_record(False)\n            if times_denied >= allowed_number_of_attempts:\n                response.flash = \\\n                    T('admin disabled because too many invalid login attempts')\n            elif times_denied == allowed_number_of_attempts - 1:\n                response.flash = \\\n                    T('You have one more login attempt before you are locked out')\n            else:\n                response.flash = T('invalid password.')\n    return dict(send=send)"
+      }
+    ]
+  },
+  {
+    "cve_id": "CVE-2017-5537",
+    "cve_description": "The password reset form in Weblate before 2.10.1 provides different error messages depending on whether the email address is associated with an account, which allows remote attackers to enumerate user accounts via a series of requests.",
+    "cwe_info": {
+      "CWE-200": {
+        "name": "Exposure of Sensitive Information to an Unauthorized Actor",
+        "description": "The product exposes sensitive information to an actor that is not explicitly authorized to have access to that information."
+      }
+    },
+    "repo": "https://github.com/WeblateOrg/weblate",
+    "patch_url": [
+      "https://github.com/WeblateOrg/weblate/commit/abe0d2a29a1d8e896bfe829c8461bf8b391f1079"
+    ],
+    "programming_language": "Python",
+    "vul_func": [
+      {
+        "id": "vul_py_345_1",
+        "commit": "e95eacf59f781d8a993be8a23b58e27afdacd9c7",
+        "file_path": "weblate/accounts/views.py",
+        "start_line": 554,
+        "end_line": 585,
+        "snippet": "def reset_password(request):\n    '''\n    Password reset handling.\n    '''\n    if 'email' not in load_backends(BACKENDS).keys():\n        messages.error(\n            request,\n            _('Can not reset password, email authentication is disabled!')\n        )\n        return redirect('login')\n\n    if request.method == 'POST':\n        form = ResetForm(request.POST)\n        if form.is_valid():\n            # Force creating new session\n            request.session.create()\n            if request.user.is_authenticated():\n                logout(request)\n\n            request.session['password_reset'] = True\n            return complete(request, 'email')\n    else:\n        form = ResetForm()\n\n    return render(\n        request,\n        'accounts/reset.html',\n        {\n            'title': _('Password reset'),\n            'form': form,\n        }\n    )"
+      }
+    ]
+  },
+  {
+    "cve_id": "CVE-2018-8097",
+    "cve_description": "io/mongo/parser.py in Eve (aka pyeve) before 0.7.5 allows remote attackers to execute arbitrary code via Code Injection in the where parameter.",
+    "cwe_info": {
+      "CWE-94": {
+        "name": "Improper Control of Generation of Code ('Code Injection')",
+        "description": "The product constructs all or part of a code segment using externally-influenced input from an upstream component, but it does not neutralize or incorrectly neutralizes special elements that could modify the syntax or behavior of the intended code segment."
+      },
+      "CWE-77": {
+        "name": "Improper Neutralization of Special Elements used in a Command ('Command Injection')",
+        "description": "The product constructs all or part of a command using externally-influenced input from an upstream component, but it does not neutralize or incorrectly neutralizes special elements that could modify the intended command when it is sent to a downstream component."
+      },
+      "CWE-78": {
+        "name": "Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')",
+        "description": "The product constructs all or part of an OS command using externally-influenced input from an upstream component, but it does not neutralize or incorrectly neutralizes special elements that could modify the intended OS command when it is sent to a downstream component."
+      }
+    },
+    "repo": "https://github.com/pyeve/eve",
+    "patch_url": [
+      "https://github.com/pyeve/eve/commit/f8f7019ffdf9b4e05faf95e1f04e204aa4c91f98"
+    ],
+    "programming_language": "Python",
+    "vul_func": [
+      {
+        "id": "vul_py_221_1",
+        "commit": "6d1526b",
+        "file_path": "eve/io/mongo/parser.py",
+        "start_line": 120,
+        "end_line": 134,
+        "snippet": "    def visit_Call(self, node):\n        \"\"\" A couple function calls are supported: bson's ObjectId() and\n        datetime().\n        \"\"\"\n        if isinstance(node.func, ast.Name):\n            expr = None\n            if node.func.id == 'ObjectId':\n                expr = \"('\" + node.args[0].s + \"')\"\n            elif node.func.id == 'datetime':\n                values = []\n                for arg in node.args:\n                    values.append(str(arg.n))\n                expr = \"(\" + \", \".join(values) + \")\"\n            if expr:\n                self.current_value = eval(node.func.id + expr)"
+      }
+    ]
+  },
+  {
+    "cve_id": "CVE-2017-15111",
+    "cve_description": "keycloak-httpd-client-install versions before 0.8 insecurely creates temporary file allowing local attackers to overwrite other files via symbolic link.",
+    "cwe_info": {
+      "CWE-59": {
+        "name": "Improper Link Resolution Before File Access ('Link Following')",
+        "description": "The product attempts to access a file based on the filename, but it does not properly prevent that filename from identifying a link or shortcut that resolves to an unintended resource."
+      }
+    },
+    "repo": "https://github.com/jdennis/keycloak-httpd-client-install",
+    "patch_url": [
+      "https://github.com/jdennis/keycloak-httpd-client-install/commit/07f26e213196936fb328ea0c1d5a66a09d8b5440"
+    ],
+    "programming_language": "Python",
+    "vul_func": [
+      {
+        "id": "vul_py_84_1",
+        "commit": "c3121b2",
+        "file_path": "keycloak_httpd_client/keycloak_cli.py",
+        "start_line": "846",
+        "end_line": "1045",
+        "snippet": "def main():\n    global logger\n    result = 0\n\n    parser = argparse.ArgumentParser(description='Keycloak REST client',\n                    prog=prog_name,\n                    epilog=verbose_help.format(prog_name=prog_name),\n                    formatter_class=argparse.RawDescriptionHelpFormatter)\n\n    parser.add_argument('-v', '--verbose', action='store_true',\n                        help='be chatty')\n\n    parser.add_argument('-d', '--debug', action='store_true',\n                        help='turn on debug info')\n\n    parser.add_argument('--show-traceback', action='store_true',\n                        help='exceptions print traceback in addition to '\n                             'error message')\n\n    parser.add_argument('--log-file',\n                        default='/tmp/{prog_name}.log'.format(\n                            prog_name=prog_name),\n                        help='log file pathname')\n\n    parser.add_argument('--permit-insecure-transport',  action='store_true',\n                        help='Normally secure transport such as TLS '\n                        'is required, defeat this check')\n\n    parser.add_argument('--tls-verify', action=TlsVerifyAction,\n                        default=True,\n                        help='TLS certificate verification for requests to'\n                        ' the server. May be one of case insenstive '\n                        '[true, yes, on] to enable,'\n                        '[false, no, off] to disable.'\n                        'Or the pathname to a OpenSSL CA bundle to use.'\n                        ' Default is True.')\n\n    group = parser.add_argument_group('Server')\n\n    group.add_argument('-s', '--server',\n                       required=True,\n                       help='DNS name or IP address of Keycloak server')\n\n    group.add_argument('-a', '--auth-role',\n                       choices=AUTH_ROLES,\n                       default='root-admin',\n                       help='authenticating as what type of user (default: root-admin)')\n\n    group.add_argument('-u', '--admin-username',\n                       default='admin',\n                       help='admin user name (default: admin)')\n\n    group.add_argument('-P', '--admin-password-file',\n                       type=argparse.FileType('rb'),\n                       help=('file containing admin password '\n                             '(or use a hyphen \"-\" to read the password '\n                             'from stdin)'))\n\n    group.add_argument('--admin-realm',\n                       default='master',\n                       help='realm admin belongs to')\n\n    cmd_parsers = parser.add_subparsers(help='available commands')\n\n    # --- realm commands ---\n    realm_parser = cmd_parsers.add_parser('realm',\n                                          help='realm operations')\n\n    sub_parser = realm_parser.add_subparsers(help='realm commands')\n\n    cmd_parser = sub_parser.add_parser('server_info',\n                                       help='dump server info')\n    cmd_parser.set_defaults(func=do_server_info)\n\n    cmd_parser = sub_parser.add_parser('list',\n                                       help='list realm names')\n    cmd_parser.set_defaults(func=do_list_realms)\n\n    cmd_parser = sub_parser.add_parser('create',\n                                       help='create new realm')\n    cmd_parser.add_argument('-r', '--realm-name', required=True,\n                            help='realm name')\n    cmd_parser.set_defaults(func=do_create_realm)\n\n    cmd_parser = sub_parser.add_parser('delete',\n                                       help='delete existing realm')\n    cmd_parser.add_argument('-r', '--realm-name', required=True,\n                            help='realm name')\n    cmd_parser.set_defaults(func=do_delete_realm)\n\n    cmd_parser = sub_parser.add_parser('metadata',\n                                       help='retrieve realm metadata')\n    cmd_parser.add_argument('-r', '--realm-name', required=True,\n                            help='realm name')\n    cmd_parser.set_defaults(func=do_get_realm_metadata)\n\n    # --- client commands ---\n    client_parser = cmd_parsers.add_parser('client',\n                                           help='client operations')\n\n    sub_parser = client_parser.add_subparsers(help='client commands')\n\n    cmd_parser = sub_parser.add_parser('list',\n                                       help='list client names')\n    cmd_parser.add_argument('-r', '--realm-name', required=True,\n                            help='realm name')\n\n    cmd_parser.set_defaults(func=do_list_clients)\n\n    cmd_parser = sub_parser.add_parser('create',\n                                       help='create new client')\n    cmd_parser.add_argument('-r', '--realm-name', required=True,\n                            help='realm name')\n    cmd_parser.add_argument('-m', '--metadata', type=argparse.FileType('rb'),\n                            required=True,\n                            help='SP metadata file or stdin')\n    cmd_parser.set_defaults(func=do_create_client)\n\n    cmd_parser = sub_parser.add_parser('register',\n                                       help='register new client')\n    cmd_parser.add_argument('-r', '--realm-name', required=True,\n                            help='realm name')\n    cmd_parser.add_argument('-m', '--metadata', type=argparse.FileType('rb'),\n                            required=True,\n                            help='SP metadata file or stdin')\n    cmd_parser.add_argument('--initial-access-token', required=True,\n                            help='realm initial access token for '\n                            'client registeration')\n    cmd_parser.set_defaults(func=do_register_client)\n\n    cmd_parser = sub_parser.add_parser('delete',\n                                       help='delete existing client')\n    cmd_parser.add_argument('-r', '--realm-name', required=True,\n                            help='realm name')\n    cmd_parser.add_argument('-c', '--client-name', required=True,\n                            help='client name')\n    cmd_parser.set_defaults(func=do_delete_client)\n\n    cmd_parser = sub_parser.add_parser('test',\n                                       help='experimental test used during '\n                                       'development')\n    cmd_parser.add_argument('-r', '--realm-name', required=True,\n                            help='realm name')\n    cmd_parser.add_argument('-c', '--client-name', required=True,\n                            help='client name')\n    cmd_parser.set_defaults(func=do_client_test)\n\n    # Process command line arguments\n    options = parser.parse_args()\n    configure_logging(options)\n\n    if options.permit_insecure_transport:\n        os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'\n\n    # Get admin password\n    options.admin_password = None\n\n    # 1. Try password file\n    if options.admin_password_file is not None:\n        options.admin_password = options.keycloak_admin_password_file.readline().strip()\n        options.keycloak_admin_password_file.close()\n\n    # 2. Try KEYCLOAK_ADMIN_PASSWORD environment variable\n    if options.admin_password is None:\n        if (('KEYCLOAK_ADMIN_PASSWORD' in os.environ) and\n            (os.environ['KEYCLOAK_ADMIN_PASSWORD'])):\n            options.admin_password = os.environ['KEYCLOAK_ADMIN_PASSWORD']\n\n    try:\n        anonymous_conn = KeycloakAnonymousConnection(options.server,\n                                                     options.tls_verify)\n\n        admin_conn = KeycloakAdminConnection(options.server,\n                                             options.auth_role,\n                                             options.admin_realm,\n                                             ADMIN_CLIENT_ID,\n                                             options.admin_username,\n                                             options.admin_password,\n                                             options.tls_verify)\n    except Exception as e:\n        if options.show_traceback:\n            traceback.print_exc()\n        print(six.text_type(e), file=sys.stderr)\n        result = 1\n        return result\n\n    try:\n        if options.func == do_register_client:\n            conn = admin_conn\n        else:\n            conn = admin_conn\n        result = options.func(options, conn)\n    except Exception as e:\n        if options.show_traceback:\n            traceback.print_exc()\n        print(six.text_type(e), file=sys.stderr)\n        result = 2\n        return result\n\n    return result"
+      }
+    ]
+  },
+  {
+    "cve_id": "CVE-2023-50423",
+    "cve_description": "SAP BTP Security Services Integration Library ([Python] sap-xssec) - versions < 4.1.0, allow under certain conditions an escalation of privileges. On successful exploitation, an unauthenticated attacker can obtain arbitrary permissions within the application.",
+    "cwe_info": {
+      "CWE-285": {
+        "name": "Improper Authorization",
+        "description": "The product does not perform or incorrectly performs an authorization check when an actor attempts to access a resource or perform an action."
+      },
+      "CWE-250": {
+        "name": "Execution with Unnecessary Privileges",
+        "description": "The product performs an operation at a privilege level that is higher than the minimum level required, which creates new weaknesses or amplifies the consequences of other weaknesses."
+      },
+      "CWE-269": {
+        "name": "Improper Privilege Management",
+        "description": "The product does not properly assign, modify, track, or check privileges for an actor, creating an unintended sphere of control for that actor."
+      }
+    },
+    "repo": "https://github.com/SAP/cloud-pysec",
+    "patch_url": [
+      "https://github.com/SAP/cloud-pysec/commit/d90c9e0733fa9af68bd8ea0b1cf023cf482163ef"
+    ],
+    "programming_language": "Python",
+    "vul_func": [
+      {
+        "id": "vul_py_183_1",
+        "commit": "77c8216",
+        "file_path": "sap/xssec/security_context_ias.py",
+        "start_line": 61,
+        "end_line": 68,
+        "snippet": "    def validate_audience(self):\n        \"\"\"\n        check `aud` in jwt token\n        \"\"\"\n        validation_result = self.audience_validator.validate_token(audiences_from_token=self.token_payload[\"aud\"])\n        if validation_result is False:\n            raise RuntimeError('Audience Validation Failed')\n        return self"
+      }
+    ]
+  },
+  {
+    "cve_id": "CVE-2023-45809",
+    "cve_description": "Wagtail is an open source content management system built on Django. A user with a limited-permission editor account for the Wagtail admin can make a direct URL request to the admin view that handles bulk actions on user accounts. While authentication rules prevent the user from making any changes, the error message discloses the display names of user accounts, and by modifying URL parameters, the user can retrieve the display name for any user. The vulnerability is not exploitable by an ordinary site visitor without access to the Wagtail admin. Patched versions have been released as Wagtail 4.1.8 (LTS), 5.0.5 and 5.1.3. The fix is also included in Release Candidate 1 of the forthcoming Wagtail 5.2 release. Users are advised to upgrade. There are no known workarounds for this vulnerability.",
+    "cwe_info": {
+      "CWE-532": {
+        "name": "Insertion of Sensitive Information into Log File",
+        "description": "The product writes sensitive information to a log file."
+      }
+    },
+    "repo": "https://github.com/wagtail/wagtail",
+    "patch_url": [
+      "https://github.com/wagtail/wagtail/commit/bc96aed6ac53f998b2f4c4bf97e2d4f5fe337e5b"
+    ],
+    "programming_language": "Python",
+    "vul_func": [
+      {
+        "id": "vul_py_70_1",
+        "commit": "190af78",
+        "file_path": "wagtail/users/views/bulk_actions/user_bulk_action.py",
+        "start_line": 6,
+        "end_line": 8,
+        "snippet": "\nclass UserBulkAction(BulkAction):\n    models = [get_user_model()]",
+        "vul_localization": [
+          {
+            "patch_lines": [
+              1,
+              2
+            ],
+            "tag": "modify"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "cve_id": "CVE-2023-51449",
+    "cve_description": "Gradio is an open-source Python package that allows you to quickly build a demo or web application for your machine learning model, API, or any arbitary Python function. Versions of `gradio` prior to 4.11.0 contained a vulnerability in the `/file` route which made them susceptible to file traversal attacks in which an attacker could access arbitrary files on a machine running a Gradio app with a public URL (e.g. if the demo was created with `share=True`, or on Hugging Face Spaces) if they knew the path of files to look for. This issue has been patched in version 4.11.0.",
+    "cwe_info": {
+      "CWE-73": {
+        "name": "External Control of File Name or Path",
+        "description": "The product allows user input to control or influence paths or file names that are used in filesystem operations."
+      },
+      "CWE-22": {
+        "name": "Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')",
+        "description": "The product uses external input to construct a pathname that is intended to identify a file or directory that is located underneath a restricted parent directory, but the product does not properly neutralize special elements within the pathname that can cause the pathname to resolve to a location that is outside of the restricted directory."
+      }
+    },
+    "repo": "https://github.com/gradio-app/gradio",
+    "patch_url": [
+      "https://github.com/gradio-app/gradio/commit/7ba8c5da45b004edd12c0460be9222f5b5f5f055",
+      "https://github.com/gradio-app/gradio/commit/1b9d4234d6c25ef250d882c7b90e1f4039ed2d76"
+    ],
+    "programming_language": "Python",
+    "vul_func": [
+      {
+        "id": "vul_py_282_1",
+        "commit": "dc131b6",
+        "file_path": "gradio/routes.py",
+        "start_line": 434,
+        "end_line": 484,
+        "snippet": "        async def file(path_or_url: str, request: fastapi.Request):\n            blocks = app.get_blocks()\n            if utils.validate_url(path_or_url):\n                return RedirectResponse(\n                    url=path_or_url, status_code=status.HTTP_302_FOUND\n                )\n            abs_path = utils.abspath(path_or_url)\n\n            in_blocklist = any(\n                utils.is_in_or_equal(abs_path, blocked_path)\n                for blocked_path in blocks.blocked_paths\n            )\n            is_dir = abs_path.is_dir()\n\n            if in_blocklist or is_dir:\n                raise HTTPException(403, f\"File not allowed: {path_or_url}.\")\n\n            created_by_app = str(abs_path) in set().union(*blocks.temp_file_sets)\n            in_allowlist = any(\n                utils.is_in_or_equal(abs_path, allowed_path)\n                for allowed_path in blocks.allowed_paths\n            )\n            was_uploaded = utils.is_in_or_equal(abs_path, app.uploaded_file_dir)\n            is_cached_example = utils.is_in_or_equal(\n                abs_path, utils.abspath(CACHED_FOLDER)\n            )\n\n            if not (\n                created_by_app or in_allowlist or was_uploaded or is_cached_example\n            ):\n                raise HTTPException(403, f\"File not allowed: {path_or_url}.\")\n\n            if not abs_path.exists():\n                raise HTTPException(404, f\"File not found: {path_or_url}.\")\n\n            range_val = request.headers.get(\"Range\", \"\").strip()\n            if range_val.startswith(\"bytes=\") and \"-\" in range_val:\n                range_val = range_val[6:]\n                start, end = range_val.split(\"-\")\n                if start.isnumeric() and end.isnumeric():\n                    start = int(start)\n                    end = int(end)\n                    response = ranged_response.RangedFileResponse(\n                        abs_path,\n                        ranged_response.OpenRange(start, end),\n                        dict(request.headers),\n                        stat_result=os.stat(abs_path),\n                    )\n                    return response\n\n            return FileResponse(abs_path, headers={\"Accept-Ranges\": \"bytes\"})"
+      }
+    ]
+  },
+  {
+    "cve_id": "CVE-2020-5390",
+    "cve_description": "PySAML2 before 5.0.0 does not check that the signature in a SAML document is enveloped and thus signature wrapping is effective, i.e., it is affected by XML Signature Wrapping (XSW). The signature information and the node/object that is signed can be in different places and thus the signature verification will succeed, but the wrong data will be used. This specifically affects the verification of assertion that have been signed.",
+    "cwe_info": {
+      "CWE-347": {
+        "name": "Improper Verification of Cryptographic Signature",
+        "description": "The product does not verify, or incorrectly verifies, the cryptographic signature for data."
+      }
+    },
+    "repo": "https://github.com/IdentityPython/pysaml2",
+    "patch_url": [
+      "https://github.com/IdentityPython/pysaml2/commit/5e9d5acbcd8ae45c4e736ac521fd2df5b1c62e25"
+    ],
+    "programming_language": "Python",
+    "vul_func": [
+      {
+        "id": "vul_py_422_1",
+        "commit": "324656e",
+        "file_path": "src/saml2/sigver.py",
+        "start_line": 1431,
+        "end_line": 1506,
+        "snippet": "    def _check_signature(self, decoded_xml, item, node_name=NODE_NAME, origdoc=None, id_attr='', must=False, only_valid_cert=False, issuer=None):\n        try:\n            _issuer = item.issuer.text.strip()\n        except AttributeError:\n            _issuer = None\n\n        if _issuer is None:\n            try:\n                _issuer = issuer.text.strip()\n            except AttributeError:\n                _issuer = None\n\n        # More trust in certs from metadata then certs in the XML document\n        if self.metadata:\n            try:\n                _certs = self.metadata.certs(_issuer, 'any', 'signing')\n            except KeyError:\n                _certs = []\n            certs = []\n\n            for cert in _certs:\n                if isinstance(cert, six.string_types):\n                    content = pem_format(cert)\n                    tmp = make_temp(content,\n                                    suffix=\".pem\",\n                                    decode=False,\n                                    delete_tmpfiles=self.delete_tmpfiles)\n                    certs.append(tmp)\n                else:\n                    certs.append(cert)\n        else:\n            certs = []\n\n        if not certs and not self.only_use_keys_in_metadata:\n            logger.debug('==== Certs from instance ====')\n            certs = [\n                make_temp(content=pem_format(cert),\n                          suffix=\".pem\",\n                          decode=False,\n                          delete_tmpfiles=self.delete_tmpfiles)\n                for cert in cert_from_instance(item)\n            ]\n        else:\n            logger.debug('==== Certs from metadata ==== %s: %s ====', _issuer, certs)\n\n        if not certs:\n            raise MissingKey(_issuer)\n\n        verified = False\n        last_pem_file = None\n\n        for pem_fd in certs:\n            try:\n                last_pem_file = pem_fd.name\n                if self.verify_signature(\n                        decoded_xml,\n                        pem_fd.name,\n                        node_name=node_name,\n                        node_id=item.id,\n                        id_attr=id_attr):\n                    verified = True\n                    break\n            except XmlsecError as exc:\n                logger.error('check_sig: %s', exc)\n                pass\n            except Exception as exc:\n                logger.error('check_sig: %s', exc)\n                raise\n\n        if verified or only_valid_cert:\n            if not self.cert_handler.verify_cert(last_pem_file):\n                raise CertificateError('Invalid certificate!')\n        else:\n            raise SignatureError('Failed to verify signature')\n\n        return item"
+      }
+    ]
+  },
+  {
+    "cve_id": "CVE-2023-22452",
+    "cve_description": "kenny2automate is a Discord bot. In the web interface for server settings, form elements were generated with Discord channel IDs as part of input names. Prior to commit a947d7c, no validation was performed to ensure that the channel IDs submitted actually belonged to the server being configured. Thus anyone who has access to the channel ID they wish to change settings for and the server settings panel for any server could change settings for the requested channel no matter which server it belonged to. Commit a947d7c resolves the issue and has been deployed to the official instance of the bot. The only workaround that exists is to disable the web config entirely by changing it to run on localhost. Note that a workaround is only necessary for those who run their own instance of the bot.",
+    "cwe_info": {
+      "CWE-20": {
+        "name": "Improper Input Validation",
+        "description": "The product receives input or data, but it does\n        not validate or incorrectly validates that the input has the\n        properties that are required to process the data safely and\n        correctly."
+      }
+    },
+    "repo": "https://github.com/Kenny2github/kenny2automate",
+    "patch_url": [
+      "https://github.com/Kenny2github/kenny2automate/commit/a947d7ce408687b587c7e6dfd6026f7c4ee31ac2"
+    ],
+    "programming_language": "Python",
+    "vul_func": [
+      {
+        "id": "vul_py_249_1",
+        "commit": "a5e1ac9",
+        "file_path": "kenny2automate/server/__init__.py",
+        "start_line": 551,
+        "end_line": 593,
+        "snippet": "    async def save_server(self, request):\n        await self.elg(request)\n        guild = self.bot.get_guild(int(request.match_info.get('server', '0')))\n        if guild is None:\n            self.notfound()\n        if not guild.get_member(\n            int(self.getsesh(request)['client']['id'])\n        ).guild_permissions.administrator:\n            self.notfound()\n        data = await request.post()\n        params = []\n        otherparams = {}\n        for k in data.keys():\n            if not k.startswith('channel-'):\n                otherparams[k] = ','.join(data.getall(k))\n                continue\n            param = {'channel_id': int(k[len('channel-'):])}\n            for v in data.getall(k):\n                v = v.partition('=')\n                if v[0] == 'ping':\n                    if 'ping' not in param:\n                        param['ping'] = set()\n                    param['ping'].add(v[-1])\n                else:\n                    param[v[0]] = v[-1] or None\n            param['ping'] = '|'.join(param.get('ping', ())) or None\n            params.append(param)\n        otherparams['guild_id'] = guild.id\n        try:\n            with self.db.connection:\n                self.db.executemany(\n                    'UPDATE channels SET lang=:lang, games_ping=:ping \\\nWHERE channel_id=:channel_id',\n                    params\n                )\n                self.db.execute(\n                    'UPDATE guilds SET guild_disabled_commands=:disable_cmd, \\\nguild_disabled_cogs=:disable_cog, words_censor=:words_censor WHERE guild_id=:guild_id',\n                    otherparams\n                )\n        except sql.ProgrammingError as exc:\n            raise web.HTTPBadRequest(reason=str(exc))\n        raise web.HTTPSeeOther(request.path)"
+      }
+    ]
+  },
+  {
+    "cve_id": "CVE-2019-14904",
+    "cve_description": "A flaw was found in the solaris_zone module from the Ansible Community modules. When setting the name for the zone on the Solaris host, the zone name is checked by listing the process with the 'ps' bare command on the remote machine. An attacker could take advantage of this flaw by crafting the name of the zone and executing arbitrary commands in the remote host. Ansible Engine 2.7.15, 2.8.7, and 2.9.2 as well as previous versions are affected.",
+    "cwe_info": {
+      "CWE-94": {
+        "name": "Improper Control of Generation of Code ('Code Injection')",
+        "description": "The product constructs all or part of a code segment using externally-influenced input from an upstream component, but it does not neutralize or incorrectly neutralizes special elements that could modify the syntax or behavior of the intended code segment."
+      },
+      "CWE-77": {
+        "name": "Improper Neutralization of Special Elements used in a Command ('Command Injection')",
+        "description": "The product constructs all or part of a command using externally-influenced input from an upstream component, but it does not neutralize or incorrectly neutralizes special elements that could modify the intended command when it is sent to a downstream component."
+      },
+      "CWE-78": {
+        "name": "Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')",
+        "description": "The product constructs all or part of an OS command using externally-influenced input from an upstream component, but it does not neutralize or incorrectly neutralizes special elements that could modify the intended OS command when it is sent to a downstream component."
+      }
+    },
+    "repo": "https://github.com/ansible/ansible",
+    "patch_url": [
+      "https://github.com/ansible/ansible/commit/a1b0f72c98b4b2afaab8aafa255e82c2075049c8",
+      "https://github.com/ansible/ansible/commit/6a86650109b8654f5898369e45d3857624edf907",
+      "https://github.com/ansible/ansible/commit/589a415f887b6f2bb65cd07fe6b2e9d0a8156b69"
+    ],
+    "programming_language": "Python",
+    "vul_func": [
+      {
+        "id": "vul_py_373_1",
+        "commit": "755348d870f5b0c25a2fb334cd91c8702e6403b3",
+        "file_path": "lib/ansible/modules/system/solaris_zone.py",
+        "start_line": 157,
+        "end_line": 184,
+        "snippet": "    def __init__(self, module):\n        self.changed = False\n        self.msg = []\n\n        self.module = module\n        self.path = self.module.params['path']\n        self.name = self.module.params['name']\n        self.sparse = self.module.params['sparse']\n        self.root_password = self.module.params['root_password']\n        self.timeout = self.module.params['timeout']\n        self.config = self.module.params['config']\n        self.create_options = self.module.params['create_options']\n        self.install_options = self.module.params['install_options']\n        self.attach_options = self.module.params['attach_options']\n\n        self.zoneadm_cmd = self.module.get_bin_path('zoneadm', True)\n        self.zonecfg_cmd = self.module.get_bin_path('zonecfg', True)\n        self.ssh_keygen_cmd = self.module.get_bin_path('ssh-keygen', True)\n\n        if self.module.check_mode:\n            self.msg.append('Running in check mode')\n\n        if platform.system() != 'SunOS':\n            self.module.fail_json(msg='This module requires Solaris')\n\n        (self.os_major, self.os_minor) = platform.release().split('.')\n        if int(self.os_minor) < 10:\n            self.module.fail_json(msg='This module requires Solaris 10 or later')"
+      }
+    ]
+  },
+  {
+    "cve_id": "CVE-2022-28346",
+    "cve_description": "An issue was discovered in Django 2.2 before 2.2.28, 3.2 before 3.2.13, and 4.0 before 4.0.4. QuerySet.annotate(), aggregate(), and extra() methods are subject to SQL injection in column aliases via a crafted dictionary (with dictionary expansion) as the passed **kwargs.",
+    "cwe_info": {
+      "CWE-89": {
+        "name": "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
+        "description": "The product constructs all or part of an SQL command using externally-influenced input from an upstream component, but it does not neutralize or incorrectly neutralizes special elements that could modify the intended SQL command when it is sent to a downstream component. Without sufficient removal or quoting of SQL syntax in user-controllable inputs, the generated SQL query can cause those inputs to be interpreted as SQL instead of ordinary user data."
+      }
+    },
+    "repo": "https://github.com/django/django",
+    "patch_url": [
+      "https://github.com/django/django/commit/93cae5cb2f9a4ef1514cf1a41f714fef08005200",
+      "https://github.com/django/django/commit/2c09e68ec911919360d5f8502cefc312f9e03c5d",
+      "https://github.com/django/django/commit/2044dac5c6968441be6f534c4139bcf48c5c7e48",
+      "https://github.com/django/django/commit/800828887a0509ad1162d6d407e94d8de7eafc60"
+    ],
+    "programming_language": "Python",
+    "vul_func": [
+      {
+        "id": "vul_py_2_1",
+        "commit": "bdb92db",
+        "file_path": "django/db/models/sql/query.py",
+        "start_line": 1037,
+        "end_line": 1045,
+        "snippet": "    def add_annotation(self, annotation, alias, is_summary=False, select=True):\n        \"\"\"Add a single annotation expression to the Query.\"\"\"\n        annotation = annotation.resolve_expression(self, allow_joins=True, reuse=None,\n                                                   summarize=is_summary)\n        if select:\n            self.append_annotation_mask([alias])\n        else:\n            self.set_annotation_mask(set(self.annotation_select).difference({alias}))\n        self.annotations[alias] = annotation",
+        "vul_localization": [
+          {
+            "patch_lines": [
+              3
+            ],
+            "tag": "add"
+          }
+        ]
+      },
+      {
+        "id": "vul_py_2_2",
+        "commit": "bdb92db",
+        "file_path": "django/db/models/sql/query.py",
+        "start_line": 2075,
+        "end_line": 2105,
+        "snippet": "    def add_extra(self, select, select_params, where, params, tables, order_by):\n        \"\"\"\n        Add data to the various extra_* attributes for user-created additions\n        to the query.\n        \"\"\"\n        if select:\n            # We need to pair any placeholder markers in the 'select'\n            # dictionary with their parameters in 'select_params' so that\n            # subsequent updates to the select dictionary also adjust the\n            # parameters appropriately.\n            select_pairs = {}\n            if select_params:\n                param_iter = iter(select_params)\n            else:\n                param_iter = iter([])\n            for name, entry in select.items():\n                entry = str(entry)\n                entry_params = []\n                pos = entry.find(\"%s\")\n                while pos != -1:\n                    if pos == 0 or entry[pos - 1] != '%':\n                        entry_params.append(next(param_iter))\n                    pos = entry.find(\"%s\", pos + 2)\n                select_pairs[name] = (entry, entry_params)\n            self.extra.update(select_pairs)\n        if where or params:\n            self.where.add(ExtraWhere(where, params), AND)\n        if tables:\n            self.extra_tables += tuple(tables)\n        if order_by:\n            self.extra_order_by = order_by",
+        "vul_localization": [
+          {
+            "patch_lines": [
+              17
+            ],
+            "tag": "add"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "cve_id": "CVE-2024-27081",
+    "cve_description": "ESPHome is a system to control your ESP8266/ESP32. A security misconfiguration in the edit configuration file API in the dashboard component of ESPHome version 2023.12.9 (command line installation) allows authenticated remote attackers to read and write arbitrary files under the configuration directory rendering remote code execution possible.  This vulnerability is patched in 2024.2.1.\n",
+    "cwe_info": {
+      "CWE-73": {
+        "name": "External Control of File Name or Path",
+        "description": "The product allows user input to control or influence paths or file names that are used in filesystem operations."
+      },
+      "CWE-22": {
+        "name": "Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')",
+        "description": "The product uses external input to construct a pathname that is intended to identify a file or directory that is located underneath a restricted parent directory, but the product does not properly neutralize special elements within the pathname that can cause the pathname to resolve to a location that is outside of the restricted directory."
+      }
+    },
+    "repo": "https://github.com/esphome/esphome",
+    "patch_url": [
+      "https://github.com/esphome/esphome/commit/d814ed1d4adc71fde47c4df41215bee449884513"
+    ],
+    "programming_language": "Python",
+    "vul_func": [
+      {
+        "id": "vul_py_152_1",
+        "commit": "84c6e52",
+        "file_path": "esphome/dashboard/web_server.py",
+        "start_line": 807,
+        "end_line": 815,
+        "snippet": "    async def get(self, configuration: str | None = None) -> None:\n        \"\"\"Get the content of a file.\"\"\"\n        loop = asyncio.get_running_loop()\n        filename = settings.rel_path(configuration)\n        content = await loop.run_in_executor(\n            None, self._read_file, filename, configuration\n        )\n        if content is not None:\n            self.write(content)"
+      },
+      {
+        "id": "vul_py_152_2",
+        "commit": "84c6e52",
+        "file_path": "esphome/dashboard/web_server.py",
+        "start_line": 834,
+        "end_line": 843,
+        "snippet": "    async def post(self, configuration: str | None = None) -> None:\n        \"\"\"Write the content of a file.\"\"\"\n        loop = asyncio.get_running_loop()\n        config_file = settings.rel_path(configuration)\n        await loop.run_in_executor(\n            None, self._write_file, config_file, self.request.body\n        )\n        # Ensure the StorageJSON is updated as well\n        DASHBOARD.entries.async_schedule_storage_json_update(filename)\n        self.set_status(200)"
+      }
+    ]
+  },
+  {
+    "cve_id": "CVE-2021-33880",
+    "cve_description": "The aaugustin websockets library before 9.1 for Python has an Observable Timing Discrepancy on servers when HTTP Basic Authentication is enabled with basic_auth_protocol_factory(credentials=...). An attacker may be able to guess a password via a timing attack.",
+    "cwe_info": {
+      "CWE-203": {
+        "name": "Observable Discrepancy",
+        "description": "The product behaves differently or sends different responses under different circumstances in a way that is observable to an unauthorized actor, which exposes security-relevant information about the state of the product, such as whether a particular operation was successful or not."
+      }
+    },
+    "repo": "https://github.com/aaugustin/websockets",
+    "patch_url": [
+      "https://github.com/aaugustin/websockets/commit/547a26b685d08cac0aa64e5e65f7867ac0ea9bc0"
+    ],
+    "programming_language": "Python",
+    "vul_func": [
+      {
+        "id": "vul_py_418_1",
+        "commit": "a14226a",
+        "file_path": "src/websockets/legacy/auth.py",
+        "start_line": 86,
+        "end_line": 162,
+        "snippet": "def basic_auth_protocol_factory(\n    realm: str,\n    credentials: Optional[Union[Credentials, Iterable[Credentials]]] = None,\n    check_credentials: Optional[Callable[[str, str], Awaitable[bool]]] = None,\n    create_protocol: Optional[Callable[[Any], BasicAuthWebSocketServerProtocol]] = None,\n) -> Callable[[Any], BasicAuthWebSocketServerProtocol]:\n    \"\"\"\n    Protocol factory that enforces HTTP Basic Auth.\n\n    ``basic_auth_protocol_factory`` is designed to integrate with\n    :func:`~websockets.legacy.server.serve` like this::\n\n        websockets.serve(\n            ...,\n            create_protocol=websockets.basic_auth_protocol_factory(\n                realm=\"my dev server\",\n                credentials=(\"hello\", \"iloveyou\"),\n            )\n        )\n\n    ``realm`` indicates the scope of protection. It should contain only ASCII\n    characters because the encoding of non-ASCII characters is undefined.\n    Refer to section 2.2 of :rfc:`7235` for details.\n\n    ``credentials`` defines hard coded authorized credentials. It can be a\n    ``(username, password)`` pair or a list of such pairs.\n\n    ``check_credentials`` defines a coroutine that checks whether credentials\n    are authorized. This coroutine receives ``username`` and ``password``\n    arguments and returns a :class:`bool`.\n\n    One of ``credentials`` or ``check_credentials`` must be provided but not\n    both.\n\n    By default, ``basic_auth_protocol_factory`` creates a factory for building\n    :class:`BasicAuthWebSocketServerProtocol` instances. You can override this\n    with the ``create_protocol`` parameter.\n\n    :param realm: scope of protection\n    :param credentials: hard coded credentials\n    :param check_credentials: coroutine that verifies credentials\n    :raises TypeError: if the credentials argument has the wrong type\n\n    \"\"\"\n    if (credentials is None) == (check_credentials is None):\n        raise TypeError(\"provide either credentials or check_credentials\")\n\n    if credentials is not None:\n        if is_credentials(credentials):\n\n            async def check_credentials(username: str, password: str) -> bool:\n                return (username, password) == credentials\n\n        elif isinstance(credentials, Iterable):\n            credentials_list = list(credentials)\n            if all(is_credentials(item) for item in credentials_list):\n                credentials_dict = dict(credentials_list)\n\n                async def check_credentials(username: str, password: str) -> bool:\n                    return credentials_dict.get(username) == password\n\n            else:\n                raise TypeError(f\"invalid credentials argument: {credentials}\")\n\n        else:\n            raise TypeError(f\"invalid credentials argument: {credentials}\")\n\n    if create_protocol is None:\n        # Not sure why mypy cannot figure this out.\n        create_protocol = cast(\n            Callable[[Any], BasicAuthWebSocketServerProtocol],\n            BasicAuthWebSocketServerProtocol,\n        )\n\n    return functools.partial(\n        create_protocol, realm=realm, check_credentials=check_credentials\n    )"
+      }
+    ]
+  },
+  {
+    "cve_id": "CVE-2024-12704",
+    "cve_description": "A vulnerability in the LangChainLLM class of the run-llama/llama_index repository, version v0.12.5, allows for a Denial of Service (DoS) attack. The stream_complete method executes the llm using a thread and retrieves the result via the get_response_gen method of the StreamingGeneratorCallbackHandler class. If the thread terminates abnormally before the _llm.predict is executed, there is no exception handling for this case, leading to an infinite loop in the get_response_gen function. This can be triggered by providing an input of an incorrect type, causing the thread to terminate and the process to continue running indefinitely.",
+    "cwe_info": {
+      "CWE-755": {
+        "name": "Improper Handling of Exceptional Conditions",
+        "description": "The product does not handle or incorrectly handles an exceptional condition."
+      }
+    },
+    "repo": "https://github.com/run-llama/llama_index",
+    "patch_url": [
+      "https://github.com/run-llama/llama_index/commit/d1ecfb77578d089cbe66728f18f635c09aa32a05"
+    ],
+    "programming_language": "Python",
+    "vul_func": [
+      {
+        "id": "vul_py_431_1",
+        "commit": "98fd497",
+        "file_path": "llama-index-core/llama_index/core/langchain_helpers/streaming.py",
+        "start_line": 38,
+        "end_line": 44,
+        "snippet": "    def get_response_gen(self) -> Generator:\n        while True:\n            if not self._token_queue.empty():\n                token = self._token_queue.get_nowait()\n                yield token\n            elif self._done.is_set():\n                break"
+      }
+    ]
+  },
+  {
+    "cve_id": "CVE-2022-4768",
+    "cve_description": "A vulnerability was found in Dropbox merou. It has been classified as critical. Affected is the function add_public_key of the file grouper/public_key.py of the component SSH Public Key Handler. The manipulation of the argument public_key_str leads to injection. It is possible to launch the attack remotely. The name of the patch is d93087973afa26bc0a2d0a5eb5c0fde748bdd107. It is recommended to apply a patch to fix this issue. VDB-216906 is the identifier assigned to this vulnerability.",
+    "cwe_info": {
+      "CWE-74": {
+        "name": "Improper Neutralization of Special Elements in Output Used by a Downstream Component ('Injection')",
+        "description": "The product constructs all or part of a command, data structure, or record using externally-influenced input from an upstream component, but it does not neutralize or incorrectly neutralizes special elements that could modify how it is parsed or interpreted when it is sent to a downstream component."
+      }
+    },
+    "repo": "https://github.com/dropbox/merou",
+    "patch_url": [
+      "https://github.com/dropbox/merou/commit/d93087973afa26bc0a2d0a5eb5c0fde748bdd107"
+    ],
+    "programming_language": "Python",
+    "vul_func": [
+      {
+        "id": "vul_py_156_1",
+        "commit": "30755ea",
+        "file_path": "grouper/public_key.py",
+        "start_line": 52,
+        "end_line": 99,
+        "snippet": "def add_public_key(session, user, public_key_str):\n    \"\"\"Add a public key for a particular user.\n\n    Args:\n        session: db session\n        user: User model of user in question\n        public_key_str: public key to add\n\n    Throws:\n        DuplicateKey if key is already in use\n        PublicKeyParseError if key can't be parsed\n        BadPublicKey if a plugin rejects the key\n\n    Returns:\n        PublicKey model object representing the key\n    \"\"\"\n    pubkey = sshpubkeys.SSHKey(public_key_str, strict=True)\n\n    try:\n        pubkey.parse()\n    except sshpubkeys.InvalidKeyException as e:\n        raise PublicKeyParseError(str(e))\n\n    try:\n        get_plugin_proxy().will_add_public_key(pubkey)\n    except PluginRejectedPublicKey as e:\n        raise BadPublicKey(str(e))\n\n    db_pubkey = PublicKey(\n        user=user,\n        public_key=pubkey.keydata.strip(),\n        fingerprint=pubkey.hash_md5().replace(\"MD5:\", \"\"),\n        fingerprint_sha256=pubkey.hash_sha256().replace(\"SHA256:\", \"\"),\n        key_size=pubkey.bits,\n        key_type=pubkey.key_type,\n        comment=pubkey.comment,\n    )\n\n    try:\n        db_pubkey.add(session)\n        Counter.incr(session, \"updates\")\n    except IntegrityError:\n        session.rollback()\n        raise DuplicateKey()\n\n    session.commit()\n\n    return db_pubkey"
+      }
+    ]
+  },
+  {
+    "cve_id": "CVE-2015-10056",
+    "cve_description": "A vulnerability was found in 2071174A vinylmap. It has been classified as critical. Affected is the function contact of the file recordstoreapp/views.py. The manipulation leads to sql injection. The name of the patch is b07b79a1e92cc62574ba0492cce000ef4a7bd25f. It is recommended to apply a patch to fix this issue. The identifier of this vulnerability is VDB-218400.",
+    "cwe_info": {
+      "CWE-89": {
+        "name": "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
+        "description": "The product constructs all or part of an SQL command using externally-influenced input from an upstream component, but it does not neutralize or incorrectly neutralizes special elements that could modify the intended SQL command when it is sent to a downstream component. Without sufficient removal or quoting of SQL syntax in user-controllable inputs, the generated SQL query can cause those inputs to be interpreted as SQL instead of ordinary user data."
+      }
+    },
+    "repo": "https://github.com/2071174A/vinylmap",
+    "patch_url": [
+      "https://github.com/2071174A/vinylmap/commit/b07b79a1e92cc62574ba0492cce000ef4a7bd25f"
+    ],
+    "programming_language": "Python",
+    "vul_func": [
+      {
+        "id": "vul_py_378_1",
+        "commit": "781d517b0d234d3fb51c9cb46584f0cf58e67675",
+        "file_path": "recordstoreapp/views.py",
+        "start_line": 25,
+        "end_line": 47,
+        "snippet": "def search(request):\n\tcontext_dict = {}\n\tif 'q' in request.GET and request.GET['q'] != '':\n\t\tq = request.GET['q']\n\t\tcursor = connection.cursor()\n\t\tcursor.execute(\"SELECT id,title,artist,cover FROM recordstoreapp_record WHERE title like '%\" + q + \"%' or artist like '%\" + q + \"%' or label like '%\" + q + \"%' or cat_no like '%\" + q + \"%';\")\n\t\trec_list=cursor.fetchall()\n\t\t\n\t\ttotal=len(rec_list)\n\t\tpg=int(request.GET['page']) if 'page' in request.GET else 1\n\t\tub=min(pg*12, total)\n\n\t\tcontext_dict['rec_list'] = rec_list[(pg-1)*12:ub]\n\t\tmaxrange = int(total/12)\n\t\tif total%12 > 0: \n\t\t\tmaxrange = maxrange + 1\n\t\tif maxrange == 1: \n\t\t\tmaxrange = 0\n\t\tcontext_dict['range'] = range(1,maxrange+1)\n\t\tprint total\n\t\tcontext_dict['q'] = q\n\n\treturn render(request, 'search.html', context_dict)"
+      }
+    ]
+  }
+]

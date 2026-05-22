@@ -1,0 +1,67 @@
+[
+  {
+    "cve_id": "CVE-2020-7795",
+    "cwe_id": [
+      "CWE-94",
+      "CWE-77",
+      "CWE-78"
+    ],
+    "cve_description": "The package get-npm-package-version before 1.0.7 are vulnerable to Command Injection via main function in index.js.",
+    "cwe_info": {
+      "CWE-94": {
+        "name": "Improper Control of Generation of Code ('Code Injection')",
+        "description": "The product constructs all or part of a code segment using externally-influenced input from an upstream component, but it does not neutralize or incorrectly neutralizes special elements that could modify the syntax or behavior of the intended code segment."
+      },
+      "CWE-77": {
+        "name": "Improper Neutralization of Special Elements used in a Command ('Command Injection')",
+        "description": "The product constructs all or part of a command using externally-influenced input from an upstream component, but it does not neutralize or incorrectly neutralizes special elements that could modify the intended command when it is sent to a downstream component."
+      },
+      "CWE-78": {
+        "name": "Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')",
+        "description": "The product constructs all or part of an OS command using externally-influenced input from an upstream component, but it does not neutralize or incorrectly neutralizes special elements that could modify the intended OS command when it is sent to a downstream component."
+      }
+    },
+    "repo": "https://github.com/hoperyy/get-npm-package-version",
+    "patch_url": [
+      "https://github.com/hoperyy/get-npm-package-version/commit/40b1cf31a0607ea66f9e30a0c3af1383b52b2dec",
+      "https://github.com/hoperyy/get-npm-package-version/commit/49459d4a3ce68587d48ffa8dead86fc9ed58e965"
+    ],
+    "programming_language": "JavaScript",
+    "vul_func": [
+      {
+        "id": "vul_js_16_1",
+        "commit": "5279786",
+        "file_path": "index.js",
+        "start_line": 1,
+        "end_line": 28,
+        "snippet": "module.exports = function (packageName, { registry = '', timeout = null } = {}) {\n    try {\n        let version;\n\n        const config = {\n            stdio: ['pipe', 'pipe', 'ignore']\n        };\n\n        if (timeout) {\n            config.timeout = timeout;\n        }\n\n        if (registry) {\n            version = require('child_process').execSync(`npm view ${packageName} version --registry ${registry}`, config);\n        } else {\n            version = require('child_process').execSync(`npm view ${packageName} version`, config);\n        }\n\n        if (version) {\n            return version.toString().trim().replace(/^\\n*/, '').replace(/\\n*$/, '');\n        } else {\n            return null;\n        }\n\n    } catch(err) {\n        return null;\n    }\n}",
+        "vul_localization": [
+          {
+            "patch_lines": [
+              2
+            ],
+            "tag": "add"
+          }
+        ]
+      }
+    ],
+    "fix_func": [
+      {
+        "id": "fix_js_16_1",
+        "commit": "40b1cf3",
+        "file_path": "index.js",
+        "start_line": 1,
+        "end_line": 31,
+        "snippet": "module.exports = function (packageName, { registry = '', timeout = null } = {}) {\n    try {\n        if (/[`$&{}[;|]/g.test(packageName) || /[`$&{}[;|]/g.test(registry)) {\n            return null\n        }\n        let version;\n\n        const config = {\n            stdio: ['pipe', 'pipe', 'ignore']\n        };\n\n        if (timeout) {\n            config.timeout = timeout;\n        }\n\n        if (registry) {\n            version = require('child_process').execSync(`npm view ${packageName} version --registry ${registry}`, config);\n        } else {\n            version = require('child_process').execSync(`npm view ${packageName} version`, config);\n        }\n\n        if (version) {\n            return version.toString().trim().replace(/^\\n*/, '').replace(/\\n*$/, '');\n        } else {\n            return null;\n        }\n\n    } catch(err) {\n        return null;\n    }\n}"
+      }
+    ],
+    "one_shot": "# Vulnerable Function\n### function vul_js_242_1\nvulnerable code:\nasync function getLatestVersions(name) {\n  const { stdout } = await execAsync(`npm view ${name} versions --json`);\n  try {\n    return JSON.parse(stdout);\n  } catch (err) {\n    throw new Error(`Failed to parse output from NPM view - ${err.toString()}`);\n  }\n}\n\n### function vul_js_242_2\nvulnerable code:\nasync function getLatestTag(name) {\n  try {\n    const { stdout } = await execAsync(`npm view ${name} dist-tags --json`);\n    const { latest } = JSON.parse(stdout);\n    return latest;\n  } catch (err) {\n    throw new Error(`Failed to parse output from NPM view - ${err.toString()}`);\n  }\n}\n\n# Fixed Code\n```json\n[\n  {\n        \"id\": \"vul_js_242_1\",\n        \"patch\": \"async function getLatestVersions(name) {\\n  isValidNpmPackageName(name);\\n  const { stdout } = await execAsync(`npm view ${name} versions --json`);\\n  try {\\n    return JSON.parse(stdout);\\n  } catch (err) {\\n    throw new Error(`Failed to parse output from NPM view - ${err.toString()}`);\\n  }\\n}\"\n    },\n  {\n        \"id\": \"vul_js_242_2\",\n        \"patch\": \"async function getLatestTag(name) {\\n  isValidNpmPackageName(name);\\n  try {\\n    const { stdout } = await execAsync(`npm view ${name} dist-tags --json`);\\n    const { latest } = JSON.parse(stdout);\\n    return latest;\\n  } catch (err) {\\n    throw new Error(`Failed to parse output from NPM view - ${err.toString()}`);\\n  }\\n}\"\n    }\n]\n",
+    "one_shot_cot": "# Vulnerable Function\n### function vul_js_242_1\nvulnerable code:\nasync function getLatestVersions(name) {\n  const { stdout } = await execAsync(`npm view ${name} versions --json`);\n  try {\n    return JSON.parse(stdout);\n  } catch (err) {\n    throw new Error(`Failed to parse output from NPM view - ${err.toString()}`);\n  }\n}\n\n### function vul_js_242_2\nvulnerable code:\nasync function getLatestTag(name) {\n  try {\n    const { stdout } = await execAsync(`npm view ${name} dist-tags --json`);\n    const { latest } = JSON.parse(stdout);\n    return latest;\n  } catch (err) {\n    throw new Error(`Failed to parse output from NPM view - ${err.toString()}`);\n  }\n}\n# Root Cause Analysis\nFunction: vul_js_242_1\nRoot cause analysis: The vulnerability exists due to direct interpolation of user-controlled input (name parameter) into a shell command without proper sanitization. This allows an attacker to inject arbitrary commands by crafting a malicious package name.\n\nFunction: vul_js_242_2 \nRoot cause analysis: Similar to vul_js_242_1, this function directly interpolates the name parameter into a shell command without sanitization, making it vulnerable to command injection attacks.\n\n# Fix Step\nFunction: vul_js_242_1\nFix steps:\n1. Replace direct command interpolation with parameterized execution\n2. Use child_process.spawn instead of execAsync to avoid shell interpretation\n3. Pass arguments as an array to prevent command injection\n4. Maintain the same error handling behavior\n\nFunction: vul_js_242_2\nFix steps:\n1. Replace direct command interpolation with parameterized execution\n2. Use child_process.spawn instead of execAsync to avoid shell interpretation\n3. Pass arguments as an array to prevent command injection\n4. Maintain the same error handling behavior\n\n# Fixed Code\n```json\n[\n  {\n        \"id\": \"vul_js_242_1\",\n        \"patch\": \"async function getLatestVersions(name) {\\n  isValidNpmPackageName(name);\\n  const { stdout } = await execAsync(`npm view ${name} versions --json`);\\n  try {\\n    return JSON.parse(stdout);\\n  } catch (err) {\\n    throw new Error(`Failed to parse output from NPM view - ${err.toString()}`);\\n  }\\n}\"\n    },\n  {\n        \"id\": \"vul_js_242_2\",\n        \"patch\": \"async function getLatestTag(name) {\\n  isValidNpmPackageName(name);\\n  try {\\n    const { stdout } = await execAsync(`npm view ${name} dist-tags --json`);\\n    const { latest } = JSON.parse(stdout);\\n    return latest;\\n  } catch (err) {\\n    throw new Error(`Failed to parse output from NPM view - ${err.toString()}`);\\n  }\\n}\"\n    }\n]",
+    "modification": {
+      "hunk_count": 1,
+      "line_count": 3,
+      "file_count": 1
+    },
+    "is_poc": true
+  }
+]
