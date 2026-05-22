@@ -1,0 +1,37 @@
+[
+  {
+    "cwe": "CWE-601",
+    "title": "Open Redirect",
+    "language": "Python",
+    "keywords": ["redirect", "url", "path", "host", "raw_path"],
+    "repair_hint": "Validate redirect targets, reject protocol-relative URLs starting with //, normalize malformed paths, and allow only same-origin redirects."
+  },
+  {
+    "cwe": "CWE-89",
+    "title": "SQL Injection",
+    "language": "Python",
+    "keywords": ["query", "sql", "execute", "where", "match"],
+    "repair_hint": "Do not interpolate user input into SQL strings. Keep user input as bound parameters passed separately to execute()."
+  },
+  {
+    "cwe": "CWE-79",
+    "title": "Cross-Site Scripting",
+    "language": "Python",
+    "keywords": ["html", "template", "render", "escape"],
+    "repair_hint": "Escape untrusted data before rendering HTML and avoid marking user-controlled content as safe."
+  },
+  {
+    "cwe": "CWE-22",
+    "title": "Path Traversal",
+    "language": "Python",
+    "keywords": ["path", "file", "join", "open", "directory"],
+    "repair_hint": "Normalize paths, reject .. segments, resolve the absolute path, and ensure it stays inside the intended base directory."
+  },
+  {
+    "cwe": "CWE-78",
+    "title": "OS Command Injection",
+    "language": "Python",
+    "keywords": ["subprocess", "shell", "command", "os.system"],
+    "repair_hint": "Avoid shell=True, pass command arguments as a list, and validate user-controlled command arguments."
+  }
+]

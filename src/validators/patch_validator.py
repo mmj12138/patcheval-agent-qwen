@@ -1,10 +1,12 @@
 # Author: mmj
-# DATE: 29.04.2026
-import os
+# DATE: 11.05.2026
 import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+
+from src.validators.diff_validator import validate_unified_diff
+from src.validators.syntax_validator import validate_python_compile
 
 
 def build_temp_file(info):
@@ -20,14 +22,9 @@ def build_temp_file(info):
 
 
 def validate_patch(info, patch):
-    if not patch.strip():
-        return False, "empty patch"
-
-    if not patch.startswith(f"--- a/{info['file_path']}\n+++ b/{info['file_path']}"):
-        return False, "patch header is invalid"
-
-    if "@@" not in patch:
-        return False, "missing unified diff hunk"
+    ok, msg = validate_unified_diff(patch, info["file_path"])
+    if not ok:
+        return False, msg
 
     tmpdir, file_path = build_temp_file(info)
 
@@ -45,16 +42,12 @@ def validate_patch(info, patch):
         if result.returncode != 0:
             return False, f"patch apply failed:\n{result.stderr}\n{result.stdout}"
 
-        if info["language"].lower() == "python" or str(file_path).endswith(".py"):
-            result = subprocess.run(
-                ["python", "-m", "py_compile", str(file_path)],
-                cwd=tmpdir,
-                text=True,
-                capture_output=True,
-            )
+        language = info.get("language", "").lower()
 
-            if result.returncode != 0:
-                return False, f"python compile failed:\n{result.stderr}"
+        if language == "python" or str(file_path).endswith(".py"):
+            ok, msg = validate_python_compile(file_path, tmpdir)
+            if not ok:
+                return False, msg
 
         return True, "valid"
 

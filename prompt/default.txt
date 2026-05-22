@@ -1,0 +1,79 @@
+# Role
+You are a code security expert specializing in fixing code security vulnerabilities.
+
+# Objective
+Generate a minimal unified diff patch that fixes the vulnerability.
+
+# Vulnerability Information
+CVE ID:
+{cve_id}
+
+CVE Description:
+{description}
+
+CWE Information:
+{cwe_info}
+
+Programming Language:
+{language}
+
+File Path:
+{file_path}
+
+Vulnerable Code starts at line {start_line} and ends at line {end_line}:
+{code}
+
+# Internal Workflow
+Think through these steps internally:
+1. Analyze the root cause of the vulnerability.
+2. Identify the vulnerable line or logic.
+3. Plan the smallest safe fix.
+4. Generate a unified diff patch.
+
+Do NOT output the analysis.
+Do NOT output the fix plan.
+
+# Patch Requirements
+- Completely eliminate the security vulnerability.
+- Preserve original functionality.
+- Keep existing code style.
+- Modify only the vulnerable code.
+- Do not add tests.
+- Do not rewrite unrelated code.
+- Do not output full source code.
+
+# Critical Output Requirements
+Output ONLY one valid unified diff patch.
+
+The patch MUST start exactly with:
+--- a/{file_path}
++++ b/{file_path}
+
+The patch MUST contain at least one @@ hunk.
+
+The patch MUST include actual code modifications:
+- at least one removed line starting with -
+OR
+- at least one added line starting with +
+
+Header-only patches are invalid.
+
+Empty patches are invalid.
+
+Do NOT output:
+- explanations
+- markdown
+- JSON
+- "Patch:"
+- "Corrected code:"
+- full file content
+- repeated prompt text
+
+# Required Output Shape
+Your output must be a real unified diff for the vulnerable code above.
+
+It must:
+- use the exact file path: {file_path}
+- contain at least one @@ hunk
+- contain real lines copied or modified from the vulnerable code
+- never use placeholder text such as "context line", "vulnerable line", "fixed line", or "..."

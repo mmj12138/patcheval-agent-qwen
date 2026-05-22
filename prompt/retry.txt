@@ -1,0 +1,65 @@
+Your previous output was invalid.
+
+Validation error:
+{error}
+
+Previous output:
+{bad_patch}
+
+Regenerate a corrected patch.
+
+# Vulnerability Information
+CVE ID:
+{cve_id}
+
+CVE Description:
+{description}
+
+CWE Information:
+{cwe_info}
+
+Programming Language:
+{language}
+
+File Path:
+{file_path}
+
+Vulnerable Code starts at line {start_line} and ends at line {end_line}:
+{code}
+
+# Correction Instructions
+Fix the previous output according to the validation error.
+
+A valid patch MUST:
+- start exactly with:
+--- a/{file_path}
++++ b/{file_path}
+
+- contain at least one @@ hunk
+- include actual code changes
+- not be header-only
+- not be empty
+- not be ed diff format such as 123c123 or 45a45
+
+# Output Rules
+Output ONLY one valid unified diff patch.
+
+Do NOT output:
+- explanations
+- markdown
+- JSON
+- "Patch:"
+- "Corrected code:"
+- full file content
+- repeated prompt text
+
+# Required Output Shape
+Your output must be a real unified diff for the vulnerable code above.
+
+It must:
+- use the exact file path: {file_path}
+- contain at least one @@ hunk
+- contain real lines copied or modified from the vulnerable code
+- never use placeholder text such as "context line", "vulnerable line", "fixed line", or "..."
+
+If the validation error says the patch adds duplicate functions, unrelated services, or too many lines, produce a smaller patch that modifies the existing vulnerable logic only.

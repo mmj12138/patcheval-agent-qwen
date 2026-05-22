@@ -1,0 +1,53 @@
+Your previous patch is INVALID.
+
+Validation / Docker feedback:
+{docker_feedback}
+
+Previous invalid patch:
+{bad_patch}
+
+You must regenerate a corrected patch.
+
+Critical requirements:
+- Fix the exact error shown above.
+- Do NOT repeat the previous invalid patch.
+- Modify the MINIMUM amount of code necessary.
+- Preserve syntax and control flow.
+- Do NOT rewrite the whole function.
+- Do NOT remove existing try/catch, except/finally, braces, or indentation structure.
+- Do NOT make no-op replacements.
+- Output ONLY a valid unified diff.
+- Patch must apply cleanly.
+- Modify only the vulnerable logic.
+
+If the validation says:
+"Patch removes control-flow/error-handling structure 'try {{' without replacement."
+
+Then:
+- You MUST preserve the original try/catch structure exactly.
+- Never delete an existing `try {{ ... }} catch (...) {{ ... }}` block.
+- Keep all braces balanced.
+- Make a minimal fix inside the vulnerable logic only.
+
+For JavaScript vulnerabilities involving child_process.execSync:
+- Preserve the original try/catch structure.
+- Do NOT rewrite the function.
+- Fix only the vulnerable command execution logic.
+- Avoid unsafe shell interpolation.
+- Prefer argument validation or safer command execution patterns.
+
+Requirements for unified diff format:
+- Start with:
+--- a/{file_path}
++++ b/{file_path}
+- Include at least one @@ hunk.
+- Do not include markdown.
+- Do not explain anything.
+- Output ONLY the patch.
+
+File path:
+{file_path}
+
+Vulnerable code (starting near line {start_line}):
+
+{code}

@@ -1,0 +1,14 @@
+{base_prompt}
+
+# Static CWE Security Tool Hint
+
+Use the following security repair guidance:
+
+{tool_hint}
+
+# Tool Usage Rules
+- The hint is security guidance only.
+- Do not blindly follow it if unrelated.
+- Keep the patch minimal.
+- Preserve original functionality.
+- Prefer the smallest secure fix.

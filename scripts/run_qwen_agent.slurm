@@ -2,11 +2,17 @@
 #SBATCH --job-name=qwen-patcheval-agent
 #SBATCH --output=logs/qwen_agent_%j.out
 #SBATCH --error=logs/qwen_agent_%j.err
-#SBATCH --time=04:00:00
+
+#SBATCH --account=gratis
 #SBATCH --partition=gpu
-#SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=4
-#SBATCH --mem=24G
+#SBATCH --qos=job_gratis
+#SBATCH --gres=gpu:rtx4090:1
+
+#SBATCH --time=12:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=64G
 
 set -e
 
@@ -51,6 +57,7 @@ if torch.cuda.is_available():
 PY
 
 # 运行 agent 生成 patch
+export MODEL_NAME="Qwen/Qwen2.5-7B-Instruct"
 bash scripts/run.sh
 
 echo "Output saved to outputs/patches.json"

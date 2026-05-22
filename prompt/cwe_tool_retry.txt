@@ -1,0 +1,14 @@
+{retry_prompt}
+
+# Static CWE Security Tool Hint
+
+Use this security guidance when correcting the patch:
+
+{tool_hint}
+
+# Retry Rules
+- Fix the validation error first.
+- Then address the vulnerability.
+- Keep the patch minimal.
+- Do not rewrite unrelated code.
+- Output ONLY unified diff.
