@@ -46,8 +46,7 @@ hf_cache/
 # =========================
 # Outputs（重要）
 # =========================
-outputs/
-data/processed/
+outputs/logs
 
 # =========================
 # Raw datasets（可选）
