@@ -8,6 +8,8 @@ from pathlib import Path
 from src.validators.diff_validator import validate_unified_diff
 from src.validators.syntax_validator import validate_python_compile
 
+from src.validators.semantic_validator import validate_meaningful_patch
+
 
 def build_temp_file(info):
     tmpdir = tempfile.mkdtemp()
@@ -23,6 +25,11 @@ def build_temp_file(info):
 
 def validate_patch(info, patch):
     ok, msg = validate_unified_diff(patch, info["file_path"])
+    if not ok:
+        return False, msg
+
+    ok, msg = validate_meaningful_patch(patch)
+
     if not ok:
         return False, msg
 
