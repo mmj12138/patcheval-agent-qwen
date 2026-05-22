@@ -87,7 +87,7 @@
   {
     "cve": "CVE-2024-12704",
     "agent": "cwe_tool",
-    "fix_patch": "--- a/llama-index-core/llama_index/core/langchain_helpers/streaming.py\n+++ b/llama-index-core/llama_index/core/langchain_helpers/streaming.py\n@@ -38,6 +38,7 @@\n     def get_response_gen(self) -> Generator:\n         while True:\n             if not self._token_queue.empty():\n+                try:\n                 token = self._token_queue.get_nowait()\n                 yield token\n             elif self._done.is_set():\n                 break\n+            except Exception as e:\n+                print(f\"Exception occurred: {e}\")"
+    "fix_patch": "--- a/llama-index-core/llama_index/core/langchain_helpers/streaming.py\n+++ b/llama-index-core/llama_index/core/langchain_helpers/streaming.py\n@@ -38,6 +38,7 @@\n     def get_response_gen(self) -> Generator:\n         while True:\n             if not self._token_queue.empty():\n+                try:\n                 token = self._token_queue.get_nowait()\n                 yield token\n             elif self._done.is_set():\n                 break\n+            except Exception as e:\n+                print(f\"Exception occurred: {e}\")\n+                break"
   },
   {
     "cve": "CVE-2022-4768",
