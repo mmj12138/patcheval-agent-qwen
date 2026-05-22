@@ -1,0 +1,5 @@
+WARNING: Connection timed out while downloading.
+WARNING: Attempting to resume incomplete download (260.0 MB/530.6 MB, attempt 1)
+WARNING: Connection timed out while downloading.
+WARNING: Attempting to resume incomplete download (118.5 MB/188.1 MB, attempt 1)
+mkdir: cannot create directory ‘/huggingface’: Permission denied

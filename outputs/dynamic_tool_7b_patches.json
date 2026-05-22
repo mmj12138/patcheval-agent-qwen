@@ -1,0 +1,102 @@
+[
+  {
+    "cve": "CVE-2024-7009",
+    "agent": "dynamic_tool",
+    "fix_patch": "--- a/src/calibre/db/backend.py\n+++ b/src/calibre/db/backend.py\n@@ -2361,14 +2361,14 @@ def search_annotations(self,\n         fts_engine_query, use_stemming, highlight_start, highlight_end, snippet_size, annotation_type,\n         restrict_to_book_ids, restrict_to_user, ignore_removed=False\n     ):\n-        fts_engine_query = unicode_normalize(fts_engine_query)\n+        fts_engine_query = self.db.escape_string(unicode_normalize(fts_engine_query))\n         fts_table = 'annotations_fts_stemmed' if use_stemming else 'annotations_fts'\n         text = 'annotations.searchable_text'\n         if highlight_start is not None and highlight_end is not None:\n             if snippet_size is not None:\n                 text = \"snippet({fts_table}, 0, ?, ?, '\\u2026', {snippet_size})\".format(\n                         fts_table=fts_table, snippet_size=max(1, min(snippet_size, 64)))\n-            else:\n-                text = f\"highlight({fts_table}, 0, '{highlight_start}', '{highlight_end}')\"\n+            else:\n+                text = f\"highlight({fts_table}, 0, ?, ?)\"\n         query = 'SELECT {0}.id, {0}.book, {0}.format, {0}.user_type, {0}.user, {0}.annot_data, {1} FROM {0} '\n         query = query.format('annotations', text)\n         query += ' JOIN {fts_table} ON annotations.id = {fts_table}.rowid'.format(fts_table=fts_table)\n         query += f' WHERE {fts_table} MATCH ?'\n         data = [fts_engine_query]\n         if restrict_to_user:\n             query += ' AND annotations.user_type = ? AND annotations.user = ?'\n             data += list(restrict_to_user)\n         if annotation_type:\n             query += ' AND annotations.annot_type = ? '\n             data.append(annotation_type)\n         query += f' ORDER BY {fts_table}.rank '\n         ls = json.loads\n         try:\n             for (rowid, book_id, fmt, user_type, user, annot_data, text) in self.execute(query, tuple(data)):\n                 if restrict_to_book_ids is not None and book_id not in restrict_to_book_ids:\n                     continue\n                 try:\n                     parsed_annot = ls(annot_data)\n                 except Exception:\n                     continue\n                 if ignore_removed and parsed_annot.get('removed'):\n                     continue\n                 yield {\n                     'id': rowid,\n                     'book_id': book_id,\n                     'format': fmt,\n                     'user_type': user_type,\n                     'user': user,\n                     'text': text,\n                     'annotation': parsed_annot,\n                 }\n         except apsw.SQLError as e:\n             raise FTSQueryError(fts_engine_query, query, e)"
+  },
+  {
+    "cve": "CVE-2024-22419",
+    "agent": "dynamic_tool",
+    "fix_patch": "--- a/vyper/builtins/functions.py\n+++ b/vyper/builtins/functions.py\n@@ -550,7 +550,7 @@ class ConcatFunction(FunctionNode):\n                 ret.append(b1.resolve(b2.resolve(do_copy)))\n \n         else:\n-            ret.append(STORE(dst_data, unwrap_location(arg)))\n+            ret.append(STORE(dst_data, unwrap_location(arg), maxlen=dst_maxlen))\n             ret.append([\"set\", ofst, [\"add\", ofst, arg.typ.m]])\n \n     ret.append(STORE(dst, ofst))"
+  },
+  {
+    "cve": "CVE-2022-4720",
+    "agent": "dynamic_tool",
+    "fix_patch": "--- a/rdiffweb/core/notification.py\n+++ b/rdiffweb/core/notification.py\n@@ -76,7 +76,7 @@ class NotificationPlugin(Plugin):\n         body = self.app.templates.compile_template(\n             \"access_token_added.html\", **{\"header_name\": self.app.cfg.header_name, 'user': userobj, 'name': name}\n         )\n-        self.bus.publish('queue_mail', to=userobj.email, subject=_(\"A new access token has been created\"), message=body)\n+        self.bus.publish('queue_mail', to=self._sanitize_email(userobj.email), subject=_(\"A new access token has been created\"), message=body)\n \n     def _sanitize_email(self, email):\n         # Simple validation to prevent open redirect\n         if not re.match(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+$', email):\n             raise ValueError(\"Invalid email address\")\n         return email"
+  },
+  {
+    "cve": "CVE-2023-4033",
+    "agent": "dynamic_tool",
+    "fix_patch": "--- a/mlflow/pyfunc/backend.py\n+++ b/mlflow/pyfunc/backend.py\n@@ -134,15 +134,15 @@ class PyFuncBackend(object):\n         \"\"\"\n         Generate predictions using generic python model saved with MLflow. The expected format of\n         the input JSON is the Mlflow scoring format.\n         Return the prediction results as a JSON.\n         \"\"\"\n         local_path = _download_artifact_from_uri(model_uri)\n         # NB: Absolute windows paths do not work with mlflow apis, use file uri to ensure\n         # platform compatibility.\n         local_uri = path_to_local_file_uri(local_path)\n\n         if self._env_manager != _EnvManager.LOCAL:\n             command = [\n                 'python',\n                 '-c', 'from mlflow.pyfunc.scoring_server import _predict;',\n                 '_predict',\n                 f'model_uri={local_uri}',\n                 f'input_path={input_path}',\n                 f'output_path={output_path}',\n                 f'content_type={content_type}'\n             ]\n             return self.prepare_env(local_path).execute(command)\n         else:\n             scoring_server._predict(local_uri, input_path, output_path, content_type)"
+  },
+  {
+    "cve": "CVE-2022-33146",
+    "agent": "dynamic_tool",
+    "fix_patch": "--- a/applications/admin/controllers/default.py\n+++ b/applications/admin/controllers/default.py\n@@ -118,7 +118,7 @@ def index():\n     \"\"\" Index handler \"\"\"\n \n     send = request.vars.send\n-    if DEMO_MODE:\n+    if DEMO_MODE and not send:\n         session.authorized = True\n         session.last_time = t0\n     if not send:\n@@ -129,7 +129,7 @@ def index():\n     if session.authorized:\n         redirect(send)\n     elif failed_login_count() >= allowed_number_of_attempts:\n-        time.sleep(2 ** allowed_number_of_attempts)\n+        time.sleep(2 ** min(allowed_number_of_attempts, 10))\n         raise HTTP(403)\n     elif request.vars.password:\n         if verify_password(request.vars.password[:1024]):\n@@ -140,7 +140,7 @@ def index():\n             session.authorized = True\n             login_record(True)\n \n-            if CHECK_VERSION:\n+            if CHECK_VERSION and not send:\n                 session.check_version = True\n             else:\n                 session.check_version = False\n \n-            session.last_time = t0\n+            session.last_time = max(t0, session.last_time) if session.last_time else t0\n             if isinstance(send, list):  # ## why does this happen?\n                 send = str(send[0])\n \n             redirect(send)\n         else:\n             times_denied = login_record(False)\n-            if times_denied >= allowed_number_of_attempts:\n+            if times_denied >= allowed_number_of_attempts and not send:\n                 response.flash = \\\n                     T('admin disabled because too many invalid login attempts')\n             elif times_denied == allowed_number_of_attempts - 1:\n                 response.flash = \\\n                     T('You have one more login attempt before you are locked out')\n             else:\n                 response.flash = T('invalid password.')\n     return dict(send=send)"
+  },
+  {
+    "cve": "CVE-2017-5537",
+    "agent": "dynamic_tool",
+    "fix_patch": "--- a/weblate/accounts/views.py\n+++ b/weblate/accounts/views.py\n@@ -554,7 +554,7 @@ def reset_password(request):\n     '''\n     Password reset handling.\n     '''\n-    if 'email' not in load_backends(BACKENDS).keys():\n+    if 'email' not in load_backends(BACKENDS) or not load_backends(BACKENDS)['email'].is_enabled():\n         messages.error(\n             request,\n             _('Can not reset password, email authentication is disabled!')"
+  },
+  {
+    "cve": "CVE-2018-8097",
+    "agent": "dynamic_tool",
+    "fix_patch": "--- a/eve/io/mongo/parser.py\n+++ b/eve/io/mongo/parser.py\n@@ -120,14 +120,14 @@ class MongoParser(ast.NodeVisitor):\n         \"\"\" A couple function calls are supported: bson's ObjectId() and\n         datetime().\n         \"\"\"\n-        if isinstance(node.func, ast.Name):\n+        if isinstance(node.func, ast.Attribute):\n             expr = None\n-            if node.func.id == 'ObjectId':\n+            if node.func.attr == 'ObjectId':\n                 expr = \"('\" + node.args[0].s + \"')\"\n-            elif node.func.id == 'datetime':\n+            elif node.func.attr == 'datetime':\n                 values = []\n                 for arg in node.args:\n                     values.append(str(arg.n))\n                 expr = \"(\" + \", \".join(values) + \")\"\n-            if expr:\n+            if expr and isinstance(node.func.value, ast.Name) and node.func.value.id == 'bson':\n                 self.current_value = eval(node.func.id + expr)"
+  },
+  {
+    "cve": "CVE-2017-15111",
+    "agent": "dynamic_tool",
+    "fix_patch": "--- a/keycloak_httpd_client/keycloak_cli.py\n+++ b/keycloak_httpd_client/keycloak_cli.py\n@@ -846,7 +846,7 @@ def main():\n     parser.add_argument('--log-file',\n                         default='/tmp/{prog_name}.log'.format(\n                             prog_name=prog_name),\n-                        help='log file pathname')\n+                        help='log file pathname (must be within /var/log)')\n \n     parser.add_argument('--permit-insecure-transport',  action='store_true',\n                         help='Normally secure transport such as TLS '"
+  },
+  {
+    "cve": "CVE-2023-50423",
+    "agent": "dynamic_tool",
+    "fix_patch": "--- a/sap/xssec/security_context_ias.py\n+++ b/sap/xssec/security_context_ias.py\n@@ -61,7 +61,7 @@ class SecurityContextIAS(object):\n         \"\"\"\n         check `aud` in jwt token\n         \"\"\"\n-        validation_result = self.audience_validator.validate_token(audiences_from_token=self.token_payload[\"aud\"])\n+        validation_result = self.audience_validator.validate_token(audiences_from_token=self.token_payload.get(\"aud\"))\n         if validation_result is False:\n             raise RuntimeError('Audience Validation Failed')\n         return self"
+  },
+  {
+    "cve": "CVE-2023-45809",
+    "agent": "dynamic_tool",
+    "fix_patch": "--- a/wagtail/users/views/bulk_actions/user_bulk_action.py\n+++ b/wagtail/users/views/bulk_actions/user_bulk_action.py\n@@ -7,7 +7,7 @@\n \n class UserBulkAction(BulkAction):\n     models = [get_user_model()]\n-    \n+\n     def get_queryset(self):\n         return self.model.objects.all()"
+  },
+  {
+    "cve": "CVE-2023-51449",
+    "agent": "dynamic_tool",
+    "fix_patch": "--- a/gradio/routes.py\n+++ b/gradio/routes.py\n@@ -434,7 +434,7 @@ async def file(path_or_url: str, request: fastapi.Request):\n             abs_path = utils.abspath(path_or_url)\n \n             in_blocklist = any(\n-                utils.is_in_or_equal(abs_path, blocked_path)\n+                utils.is_in_or_equal(os.path.normpath(abs_path), blocked_path)\n                 for blocked_path in blocks.blocked_paths\n             )\n             is_dir = abs_path.is_dir()"
+  },
+  {
+    "cve": "CVE-2020-5390",
+    "agent": "dynamic_tool",
+    "fix_patch": "--- a/src/saml2/sigver.py\n+++ b/src/saml2/sigver.py\n@@ -1438,6 +1438,7 @@ def _check_signature(self, decoded_xml, item, node_name=NODE_NAME, origdoc=None, id_attr='', must=False, only_valid_cert=False, issuer=None):\n                 if isinstance(cert, six.string_types):\n                     content = pem_format(cert)\n                     tmp = make_temp(content,\n+                                    suffix=\".pem\",\n                                     decode=False,\n                                     delete_tmpfiles=self.delete_tmpfiles)\n                     certs.append(tmp)"
+  },
+  {
+    "cve": "CVE-2023-22452",
+    "agent": "dynamic_tool",
+    "fix_patch": "--- a/kenny2automate/server/__init__.py\n+++ b/kenny2automate/server/__init__.py\n@@ -551,7 +551,7 @@ async def save_server(self, request):\n             param['ping'] = set()\n         param['ping'].add(v[-1])\n     else:\n-        param[v[0]] = v[-1] or None\n+        param[v[0]] = v[-1]\n     param['ping'] = '|'.join(param.get('ping', ())) or None\n     params.append(param)"
+  },
+  {
+    "cve": "CVE-2019-14904",
+    "agent": "dynamic_tool",
+    "fix_patch": "--- a/lib/ansible/modules/system/solaris_zone.py\n+++ b/lib/ansible/modules/system/solaris_zone.py\n@@ -157,7 +157,7 @@ class SolarisZoneModule(object):\n         self.attach_options = self.module.params['attach_options']\n\n         self.zoneadm_cmd = self.module.get_bin_path('zoneadm', True)\n-        self.zonecfg_cmd = self.module.get_bin_path('zonecfg', True)\n+        self.zonecfg_cmd = self.module.get_bin_path('zonecfg', required=True)\n         self.ssh_keygen_cmd = self.module.get_bin_path('ssh-keygen', True)\n\n         if self.module.check_mode:"
+  },
+  {
+    "cve": "CVE-2022-28346",
+    "agent": "dynamic_tool",
+    "fix_patch": "--- a/django/db/models/sql/query.py\n+++ b/django/db/models/sql/query.py\n@@ -1037,7 +1037,7 @@ def add_annotation(self, annotation, alias, is_summary=False, select=True):\n         \"\"\"Add a single annotation expression to the Query.\"\"\"\n         annotation = annotation.resolve_expression(self, allow_joins=True, reuse=None,\n                                                    summarize=is_summary)\n-        if select:\n+        if select and isinstance(alias, str):\n             self.append_annotation_mask([alias])\n         else:\n             self.set_annotation_mask(set(self.annotation_select).difference({alias}))"
+  },
+  {
+    "cve": "CVE-2024-27081",
+    "agent": "dynamic_tool",
+    "fix_patch": "--- a/esphome/dashboard/web_server.py\n+++ b/esphome/dashboard/web_server.py\n@@ -807,7 +807,7 @@ async def get(self, configuration: str | None = None) -> None:\n         \"\"\"Get the content of a file.\"\"\"\n         loop = asyncio.get_running_loop()\n         filename = settings.rel_path(configuration)\n-        content = await loop.run_in_executor(None, self._read_file, filename, configuration)\n+        content = await loop.run_in_executor(None, self._read_file, os.path.abspath(os.path.join(settings.config_dir, filename)), configuration)\n         if content is not None:\n             self.write(content)"
+  },
+  {
+    "cve": "CVE-2021-33880",
+    "agent": "dynamic_tool",
+    "fix_patch": "--- a/src/websockets/legacy/auth.py\n+++ b/src/websockets/legacy/auth.py\n@@ -100,7 +100,7 @@ def basic_auth_protocol_factory(\n                 return (username, password) == credentials\n \n         elif isinstance(credentials, Iterable):\n-            credentials_list = list(credentials)\n+            credentials_list = tuple(credentials)\n             if all(is_credentials(item) for item in credentials_list):\n                 credentials_dict = dict(credentials_list)\n \n@@ -110,7 +110,7 @@ def basic_auth_protocol_factory(\n                     return credentials_dict.get(username) == password\n \n             else:\n-                raise TypeError(f\"invalid credentials argument: {credentials}\")\n+                raise TypeError(f\"invalid credentials argument: {tuple(credentials)}\")\n \n     else:\n         raise TypeError(f\"invalid credentials argument: {credentials}\")"
+  },
+  {
+    "cve": "CVE-2024-12704",
+    "agent": "dynamic_tool",
+    "fix_patch": "--- a/llama-index-core/llama_index/core/langchain_helpers/streaming.py\n+++ b/llama-index-core/llama_index/core/langchain_helpers/streaming.py\n@@ -38,7 +38,7 @@\n     def get_response_gen(self) -> Generator:\n         while True:\n             if not self._token_queue.empty():\n-                token = self._token_queue.get_nowait()\n+                try:\n+                    token = self._token_queue.get_nowait()\n+                except Queue.Empty:\n+                    continue\n                 yield token\n             elif self._done.is_set():\n                 break"
+  },
+  {
+    "cve": "CVE-2022-4768",
+    "agent": "dynamic_tool",
+    "fix_patch": "--- a/grouper/public_key.py\n+++ b/grouper/public_key.py\n@@ -99,7 +99,7 @@ def add_public_key(session, user, public_key_str):\n             Counter.incr(session, \"updates\")\n         except IntegrityError:\n             session.rollback()\n-            raise DuplicateKey()\n+            raise DuplicateKey(\"Public key already exists.\")\n \n     session.commit()\n \n     return db_pubkey"
+  },
+  {
+    "cve": "CVE-2015-10056",
+    "agent": "dynamic_tool",
+    "fix_patch": "--- a/recordstoreapp/views.py\n+++ b/recordstoreapp/views.py\n@@ -25,14 +25,14 @@\n     context_dict = {}\n     if 'q' in request.GET and request.GET['q'] != '':\n         q = request.GET['q']\n-        cursor = connection.cursor()\n-        cursor.execute(\"SELECT id,title,artist,cover FROM recordstoreapp_record WHERE title like '%\" + q + \"%' or artist like '%\" + q + \"%' or label like '%\" + q + \"%' or cat_no like '%\" + q + \"%';\")\n-        rec_list=cursor.fetchall()\n+        cursor = connection.cursor()\n+        cursor.execute(\"SELECT id,title,artist,cover FROM recordstoreapp_record WHERE title LIKE %s OR artist LIKE %s OR label LIKE %s OR cat_no LIKE %s;\", (q, q, q, q))\n+        rec_list = cursor.fetchall()\n         \n         total = len(rec_list)\n         pg = int(request.GET['page']) if 'page' in request.GET else 1\n         ub = min(pg * 12, total)\n \n         context_dict['rec_list'] = rec_list[(pg - 1) * 12:ub]\n         maxrange = int(total / 12)\n         if total % 12 > 0:\n             maxrange = maxrange + 1\n         if maxrange == 1:\n             maxrange = 0\n         context_dict['range'] = range(1, maxrange + 1)\n         print(total)\n         context_dict['q'] = q\n \n     return render(request, 'search.html', context_dict)"
+  }
+]
