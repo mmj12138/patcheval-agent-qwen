@@ -254,14 +254,14 @@ class Evaluation:
         self.docker_manager.rm_container(container_name)
         self.logger.info(f"Finish eval and remove container {container_name}")
 
-        if run_poc_result and unittest_result:
-            errpr_type="Repair Success"
-        elif run_poc_result==False and run_poc_msg is not None:
-            errpr_type=self._error_type(run_poc_msg, language)
-        elif unittest_result==False and unittest_msg is not None:
-            errpr_type=self._error_type(unittest_msg, language)
+        if run_poc_result is True and unittest_result is not False:
+            errpr_type = "Repair Success"
+        elif run_poc_result is False and run_poc_msg is not None:
+            errpr_type = self._error_type(run_poc_msg, language)
+        elif unittest_result is False and unittest_msg is not None:
+            errpr_type = self._error_type(unittest_msg, language)
         else:
-            errpr_type=None
+            errpr_type = "unknown_fail"
             
         return run_poc_result, run_poc_msg, unittest_result, unittest_msg, errpr_type
 

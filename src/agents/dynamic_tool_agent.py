@@ -27,6 +27,18 @@ The following repair strategies were retrieved based on the CVE, CWE, language, 
 - Modify only the vulnerable logic.
 - Keep the patch minimal.
 - Output ONLY unified diff.
+
+IMPORTANT PATCH RULES:
+- Return a MINIMAL unified diff only.
+- Modify the existing vulnerable code instead of rewriting the function.
+- Do NOT duplicate functions.
+- Do NOT remove try/except or error handling unless necessary.
+- Preserve indentation and surrounding structure.
+- Avoid no-op changes.
+- Do not change unrelated logic.
+- Do NOT output unchanged lines as removed/added pairs.
+- Use the exact target file path from the prompt header.
+- The patch must apply to the vulnerable snippet context.
 """
 
 

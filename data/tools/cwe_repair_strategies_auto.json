@@ -1,0 +1,422 @@
+[
+  {
+    "cwe": "CWE-22",
+    "title": "Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')",
+    "language": "Python",
+    "count": 84,
+    "repair_hint": "Normalize and resolve paths, reject traversal, and ensure the final path stays inside the allowed base directory."
+  },
+  {
+    "cwe": "CWE-73",
+    "title": "External Control of File Name or Path",
+    "language": "Python",
+    "count": 66,
+    "repair_hint": "Do not use user-controlled file paths directly. Validate, normalize, and restrict them to allowed directories."
+  },
+  {
+    "cwe": "CWE-78",
+    "title": "Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')",
+    "language": "Python",
+    "count": 61,
+    "repair_hint": "Avoid shell=True and shell string interpolation. Use subprocess argument lists."
+  },
+  {
+    "cwe": "CWE-77",
+    "title": "Improper Neutralization of Special Elements used in a Command ('Command Injection')",
+    "language": "Python",
+    "count": 58,
+    "repair_hint": "Avoid command strings with user input. Use argument lists and validate arguments."
+  },
+  {
+    "cwe": "CWE-94",
+    "title": "Improper Control of Generation of Code ('Code Injection')",
+    "language": "Python",
+    "count": 57,
+    "repair_hint": "Avoid eval/exec or dynamic code generation with user-controlled data."
+  },
+  {
+    "cwe": "CWE-601",
+    "title": "URL Redirection to Untrusted Site ('Open Redirect')",
+    "language": "Python",
+    "count": 35,
+    "repair_hint": "Validate redirect targets and allow only same-origin or explicitly allowed redirects."
+  },
+  {
+    "cwe": "CWE-89",
+    "title": "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
+    "language": "Python",
+    "count": 23,
+    "repair_hint": "Use parameterized SQL queries and pass user input as bound parameters."
+  },
+  {
+    "cwe": "CWE-918",
+    "title": "Server-Side Request Forgery (SSRF)",
+    "language": "Python",
+    "count": 22,
+    "repair_hint": "Validate outbound URLs, restrict schemes/hosts, and block private/internal IP ranges."
+  },
+  {
+    "cwe": "CWE-20",
+    "title": "Improper Input Validation",
+    "language": "Python",
+    "count": 17,
+    "repair_hint": "Validate input type, length, range, format, and allowed values before use."
+  },
+  {
+    "cwe": "CWE-200",
+    "title": "Exposure of Sensitive Information to an Unauthorized Actor",
+    "language": "Python",
+    "count": 16,
+    "repair_hint": "Avoid exposing sensitive information in responses, errors, logs, or timing differences."
+  },
+  {
+    "cwe": "CWE-269",
+    "title": "Improper Privilege Management",
+    "language": "Python",
+    "count": 15,
+    "repair_hint": "Enforce privilege checks before sensitive operations."
+  },
+  {
+    "cwe": "CWE-862",
+    "title": "Missing Authorization",
+    "language": "Python",
+    "count": 14,
+    "repair_hint": "Identify the user-controlled input and the vulnerable sink. Apply the smallest safe validation, escaping, authorization, or bounds check. Preserve existing behavior and avoid unrelated rewrites."
+  },
+  {
+    "cwe": "CWE-285",
+    "title": "Improper Authorization",
+    "language": "Python",
+    "count": 14,
+    "repair_hint": "Add explicit authorization checks before protected actions."
+  },
+  {
+    "cwe": "CWE-250",
+    "title": "Execution with Unnecessary Privileges",
+    "language": "Python",
+    "count": 13,
+    "repair_hint": "Apply least privilege and avoid unnecessary elevated permissions."
+  },
+  {
+    "cwe": "CWE-863",
+    "title": "Incorrect Authorization",
+    "language": "Python",
+    "count": 11,
+    "repair_hint": "Verify roles, permissions, and object ownership before sensitive operations."
+  },
+  {
+    "cwe": "CWE-287",
+    "title": "Improper Authentication",
+    "language": "Python",
+    "count": 11,
+    "repair_hint": "Verify authentication state server-side before granting access."
+  },
+  {
+    "cwe": "CWE-639",
+    "title": "Authorization Bypass Through User-Controlled Key",
+    "language": "Python",
+    "count": 10,
+    "repair_hint": "Check ownership and authorization before accessing user-controlled object IDs."
+  },
+  {
+    "cwe": "CWE-74",
+    "title": "Improper Neutralization of Special Elements in Output Used by a Downstream Component ('Injection')",
+    "language": "Python",
+    "count": 9,
+    "repair_hint": "Identify the user-controlled input and the vulnerable sink. Apply the smallest safe validation, escaping, authorization, or bounds check. Preserve existing behavior and avoid unrelated rewrites."
+  },
+  {
+    "cwe": "CWE-444",
+    "title": "Inconsistent Interpretation of HTTP Requests ('HTTP Request/Response Smuggling')",
+    "language": "Python",
+    "count": 5,
+    "repair_hint": "Identify the user-controlled input and the vulnerable sink. Apply the smallest safe validation, escaping, authorization, or bounds check. Preserve existing behavior and avoid unrelated rewrites."
+  },
+  {
+    "cwe": "CWE-502",
+    "title": "Deserialization of Untrusted Data",
+    "language": "Python",
+    "count": 5,
+    "repair_hint": "Avoid unsafe deserialization of untrusted data."
+  },
+  {
+    "cwe": "CWE-668",
+    "title": "Exposure of Resource to Wrong Sphere",
+    "language": "Python",
+    "count": 4,
+    "repair_hint": "Ensure resources are only exposed to the correct security boundary or authorized actor."
+  },
+  {
+    "cwe": "CWE-284",
+    "title": "Improper Access Control",
+    "language": "Python",
+    "count": 4,
+    "repair_hint": "Identify the user-controlled input and the vulnerable sink. Apply the smallest safe validation, escaping, authorization, or bounds check. Preserve existing behavior and avoid unrelated rewrites."
+  },
+  {
+    "cwe": "CWE-532",
+    "title": "Insertion of Sensitive Information into Log File",
+    "language": "Python",
+    "count": 4,
+    "repair_hint": "Redact sensitive values before logging."
+  },
+  {
+    "cwe": "CWE-59",
+    "title": "Improper Link Resolution Before File Access ('Link Following')",
+    "language": "Python",
+    "count": 4,
+    "repair_hint": "Use secure tempfile APIs and avoid following attacker-controlled symbolic links."
+  },
+  {
+    "cwe": "CWE-116",
+    "title": "Improper Encoding or Escaping of Output",
+    "language": "Python",
+    "count": 4,
+    "repair_hint": "Identify the user-controlled input and the vulnerable sink. Apply the smallest safe validation, escaping, authorization, or bounds check. Preserve existing behavior and avoid unrelated rewrites."
+  },
+  {
+    "cwe": "CWE-522",
+    "title": "Insufficiently Protected Credentials",
+    "language": "Python",
+    "count": 3,
+    "repair_hint": "Do not expose credentials in logs, URLs, errors, or responses."
+  },
+  {
+    "cwe": "CWE-611",
+    "title": "Improper Restriction of XML External Entity Reference",
+    "language": "Python",
+    "count": 3,
+    "repair_hint": "Identify the user-controlled input and the vulnerable sink. Apply the smallest safe validation, escaping, authorization, or bounds check. Preserve existing behavior and avoid unrelated rewrites."
+  },
+  {
+    "cwe": "CWE-434",
+    "title": "Unrestricted Upload of File with Dangerous Type",
+    "language": "Python",
+    "count": 3,
+    "repair_hint": "Validate uploaded file type, size, extension, and storage path."
+  },
+  {
+    "cwe": "CWE-613",
+    "title": "Insufficient Session Expiration",
+    "language": "Python",
+    "count": 2,
+    "repair_hint": "Identify the user-controlled input and the vulnerable sink. Apply the smallest safe validation, escaping, authorization, or bounds check. Preserve existing behavior and avoid unrelated rewrites."
+  },
+  {
+    "cwe": "CWE-1333",
+    "title": "Inefficient Regular Expression Complexity",
+    "language": "Python",
+    "count": 2,
+    "repair_hint": "Identify the user-controlled input and the vulnerable sink. Apply the smallest safe validation, escaping, authorization, or bounds check. Preserve existing behavior and avoid unrelated rewrites."
+  },
+  {
+    "cwe": "CWE-306",
+    "title": "Missing Authentication for Critical Function",
+    "language": "Python",
+    "count": 2,
+    "repair_hint": "Require authentication before sensitive endpoints or operations."
+  },
+  {
+    "cwe": "CWE-347",
+    "title": "Improper Verification of Cryptographic Signature",
+    "language": "Python",
+    "count": 2,
+    "repair_hint": "Verify signatures against the correct signed object and trusted keys."
+  },
+  {
+    "cwe": "CWE-352",
+    "title": "Cross-Site Request Forgery (CSRF)",
+    "language": "Python",
+    "count": 2,
+    "repair_hint": "Require and validate CSRF tokens for state-changing requests."
+  },
+  {
+    "cwe": "CWE-732",
+    "title": "Incorrect Permission Assignment for Critical Resource",
+    "language": "Python",
+    "count": 2,
+    "repair_hint": "Identify the user-controlled input and the vulnerable sink. Apply the smallest safe validation, escaping, authorization, or bounds check. Preserve existing behavior and avoid unrelated rewrites."
+  },
+  {
+    "cwe": "CWE-203",
+    "title": "Observable Discrepancy",
+    "language": "Python",
+    "count": 1,
+    "repair_hint": "Use generic responses and constant-time comparisons where appropriate."
+  },
+  {
+    "cwe": "CWE-346",
+    "title": "Origin Validation Error",
+    "language": "Python",
+    "count": 1,
+    "repair_hint": "Identify the user-controlled input and the vulnerable sink. Apply the smallest safe validation, escaping, authorization, or bounds check. Preserve existing behavior and avoid unrelated rewrites."
+  },
+  {
+    "cwe": "CWE-610",
+    "title": "Externally Controlled Reference to a Resource in Another Sphere",
+    "language": "Python",
+    "count": 1,
+    "repair_hint": "Identify the user-controlled input and the vulnerable sink. Apply the smallest safe validation, escaping, authorization, or bounds check. Preserve existing behavior and avoid unrelated rewrites."
+  },
+  {
+    "cwe": "CWE-755",
+    "title": "Improper Handling of Exceptional Conditions",
+    "language": "Python",
+    "count": 1,
+    "repair_hint": "Handle exceptional paths explicitly and avoid hangs or infinite loops."
+  },
+  {
+    "cwe": "CWE-787",
+    "title": "Out-of-bounds Write",
+    "language": "Python",
+    "count": 1,
+    "repair_hint": "Check buffer sizes and bounds before writing."
+  },
+  {
+    "cwe": "CWE-521",
+    "title": "Weak Password Requirements",
+    "language": "Python",
+    "count": 1,
+    "repair_hint": "Identify the user-controlled input and the vulnerable sink. Apply the smallest safe validation, escaping, authorization, or bounds check. Preserve existing behavior and avoid unrelated rewrites."
+  },
+  {
+    "cwe": "CWE-416",
+    "title": "Use After Free",
+    "language": "Python",
+    "count": 1,
+    "repair_hint": "Identify the user-controlled input and the vulnerable sink. Apply the smallest safe validation, escaping, authorization, or bounds check. Preserve existing behavior and avoid unrelated rewrites."
+  },
+  {
+    "cwe": "CWE-476",
+    "title": "NULL Pointer Dereference",
+    "language": "Python",
+    "count": 1,
+    "repair_hint": "Identify the user-controlled input and the vulnerable sink. Apply the smallest safe validation, escaping, authorization, or bounds check. Preserve existing behavior and avoid unrelated rewrites."
+  },
+  {
+    "cwe": "CWE-345",
+    "title": "Insufficient Verification of Data Authenticity",
+    "language": "Python",
+    "count": 1,
+    "repair_hint": "Identify the user-controlled input and the vulnerable sink. Apply the smallest safe validation, escaping, authorization, or bounds check. Preserve existing behavior and avoid unrelated rewrites."
+  },
+  {
+    "cwe": "CWE-88",
+    "title": "Improper Neutralization of Argument Delimiters in a Command ('Argument Injection')",
+    "language": "Python",
+    "count": 1,
+    "repair_hint": "Identify the user-controlled input and the vulnerable sink. Apply the smallest safe validation, escaping, authorization, or bounds check. Preserve existing behavior and avoid unrelated rewrites."
+  },
+  {
+    "cwe": "CWE-835",
+    "title": "Loop with Unreachable Exit Condition ('Infinite Loop')",
+    "language": "Python",
+    "count": 1,
+    "repair_hint": "Identify the user-controlled input and the vulnerable sink. Apply the smallest safe validation, escaping, authorization, or bounds check. Preserve existing behavior and avoid unrelated rewrites."
+  },
+  {
+    "cwe": "CWE-843",
+    "title": "Access of Resource Using Incompatible Type ('Type Confusion')",
+    "language": "Python",
+    "count": 1,
+    "repair_hint": "Identify the user-controlled input and the vulnerable sink. Apply the smallest safe validation, escaping, authorization, or bounds check. Preserve existing behavior and avoid unrelated rewrites."
+  },
+  {
+    "cwe": "CWE-400",
+    "title": "Uncontrolled Resource Consumption",
+    "language": "Python",
+    "count": 1,
+    "repair_hint": "Add limits, timeouts, size checks, and safe loop termination."
+  },
+  {
+    "cwe": "CWE-79",
+    "title": "Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')",
+    "language": "Python",
+    "count": 1,
+    "repair_hint": "Escape untrusted output before rendering HTML and avoid marking user data as safe."
+  },
+  {
+    "cwe": "CWE-327",
+    "title": "Use of a Broken or Risky Cryptographic Algorithm",
+    "language": "Python",
+    "count": 1,
+    "repair_hint": "Replace weak cryptographic algorithms with safe alternatives."
+  },
+  {
+    "cwe": "CWE-384",
+    "title": "Session Fixation",
+    "language": "Python",
+    "count": 1,
+    "repair_hint": "Identify the user-controlled input and the vulnerable sink. Apply the smallest safe validation, escaping, authorization, or bounds check. Preserve existing behavior and avoid unrelated rewrites."
+  },
+  {
+    "cwe": "CWE-770",
+    "title": "Allocation of Resources Without Limits or Throttling",
+    "language": "Python",
+    "count": 1,
+    "repair_hint": "Identify the user-controlled input and the vulnerable sink. Apply the smallest safe validation, escaping, authorization, or bounds check. Preserve existing behavior and avoid unrelated rewrites."
+  },
+  {
+    "cwe": "CWE-295",
+    "title": "Improper Certificate Validation",
+    "language": "Python",
+    "count": 1,
+    "repair_hint": "Identify the user-controlled input and the vulnerable sink. Apply the smallest safe validation, escaping, authorization, or bounds check. Preserve existing behavior and avoid unrelated rewrites."
+  },
+  {
+    "cwe": "CWE-125",
+    "title": "Out-of-bounds Read",
+    "language": "Python",
+    "count": 1,
+    "repair_hint": "Identify the user-controlled input and the vulnerable sink. Apply the smallest safe validation, escaping, authorization, or bounds check. Preserve existing behavior and avoid unrelated rewrites."
+  },
+  {
+    "cwe": "CWE-312",
+    "title": "Cleartext Storage of Sensitive Information",
+    "language": "Python",
+    "count": 1,
+    "repair_hint": "Identify the user-controlled input and the vulnerable sink. Apply the smallest safe validation, escaping, authorization, or bounds check. Preserve existing behavior and avoid unrelated rewrites."
+  },
+  {
+    "cwe": "CWE-362",
+    "title": "Concurrent Execution using Shared Resource with Improper Synchronization ('Race Condition')",
+    "language": "Python",
+    "count": 1,
+    "repair_hint": "Identify the user-controlled input and the vulnerable sink. Apply the smallest safe validation, escaping, authorization, or bounds check. Preserve existing behavior and avoid unrelated rewrites."
+  },
+  {
+    "cwe": "CWE-697",
+    "title": "Incorrect Comparison",
+    "language": "Python",
+    "count": 1,
+    "repair_hint": "Identify the user-controlled input and the vulnerable sink. Apply the smallest safe validation, escaping, authorization, or bounds check. Preserve existing behavior and avoid unrelated rewrites."
+  },
+  {
+    "cwe": "CWE-190",
+    "title": "Integer Overflow or Wraparound",
+    "language": "Python",
+    "count": 1,
+    "repair_hint": "Identify the user-controlled input and the vulnerable sink. Apply the smallest safe validation, escaping, authorization, or bounds check. Preserve existing behavior and avoid unrelated rewrites."
+  },
+  {
+    "cwe": "CWE-754",
+    "title": "Improper Check for Unusual or Exceptional Conditions",
+    "language": "Python",
+    "count": 1,
+    "repair_hint": "Identify the user-controlled input and the vulnerable sink. Apply the smallest safe validation, escaping, authorization, or bounds check. Preserve existing behavior and avoid unrelated rewrites."
+  },
+  {
+    "cwe": "CWE-276",
+    "title": "Incorrect Default Permissions",
+    "language": "Python",
+    "count": 1,
+    "repair_hint": "Identify the user-controlled input and the vulnerable sink. Apply the smallest safe validation, escaping, authorization, or bounds check. Preserve existing behavior and avoid unrelated rewrites."
+  },
+  {
+    "cwe": "CWE-209",
+    "title": "Generation of Error Message Containing Sensitive Information",
+    "language": "Python",
+    "count": 1,
+    "repair_hint": "Identify the user-controlled input and the vulnerable sink. Apply the smallest safe validation, escaping, authorization, or bounds check. Preserve existing behavior and avoid unrelated rewrites."
+  }
+]
