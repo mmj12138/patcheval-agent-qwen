@@ -25,9 +25,24 @@ module load Python/3.10
 
 source "$HOME/venvs/myddlenv/bin/activate"
 
+# python -m pip install --upgrade pip
+# python -m pip install torch transformers accelerate sentencepiece safetensors tqdm
+
 echo "Running on node: $(hostname)"
 echo "Python: $(which python)"
 echo "Start time: $(date)"
+
+
+
+# python - <<'PY'
+# import torch
+# import transformers
+# print("torch:", torch.__version__)
+# print("transformers:", transformers.__version__)
+# print("cuda:", torch.cuda.is_available())
+# if torch.cuda.is_available():
+#     print("gpu:", torch.cuda.get_device_name(0))
+# PY
 
 export MODEL_NAME="Qwen/Qwen2.5-Coder-7B-Instruct"
 export MAX_NEW_TOKENS=1024

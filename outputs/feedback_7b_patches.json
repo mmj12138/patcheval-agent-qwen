@@ -1,0 +1,102 @@
+[
+  {
+    "cve": "CVE-2024-7009",
+    "agent": "feedback",
+    "fix_patch": "--- a/src/calibre/db/backend.py\n+++ b/src/calibre/db/backend.py\n@@ -2361,7 +2361,7 @@ def search_annotations(self,\n         fts_engine_query = unicode_normalize(fts_engine_query)\n         fts_table = 'annotations_fts_stemmed' if use_stemming else 'annotations_fts'\n         text = 'annotations.searchable_text'\n-        if highlight_start is not None and highlight_end is not None:\n+        if highlight_start is not None and highlight_end is not None and isinstance(highlight_start, str) and isinstance(highlight_end, str):\n             if snippet_size is not None:\n                 text = \"snippet({fts_table}, 0, ?, ?, '\\u2026', {snippet_size})\".format(\n                         fts_table=fts_table, snippet_size=max(1, min(snippet_size, 64)))"
+  },
+  {
+    "cve": "CVE-2024-22419",
+    "agent": "feedback",
+    "fix_patch": "--- a/vyper/builtins/functions.py\n+++ b/vyper/builtins/functions.py\n@@ -560,7 +560,7 @@ class ConcatFunction(FunctionNode):\n                 ret.append(b1.resolve(b2.resolve(do_copy)))\n \n         else:\n-            ret.append(STORE(dst_data, unwrap_location(arg)))\n+            ret.append(STORE(dst_data, unwrap_location(arg), maxlen=dst_maxlen))\n             ret.append([\"set\", ofst, [\"add\", ofst, arg.typ.m]])\n \n     ret.append(STORE(dst, ofst))"
+  },
+  {
+    "cve": "CVE-2022-4720",
+    "agent": "feedback",
+    "fix_patch": "--- a/rdiffweb/core/notification.py\n+++ b/rdiffweb/core/notification.py\n@@ -66,7 +66,7 @@ class NotificationPlugin(Plugin):\n         if not self.send_changed:\n             return\n \n-        if not userobj.email:\n+        if not userobj.email or not userobj.email.startswith(('http://', 'https://')):\n             logger.info(\"can't sent mail to user [%s] without an email\", userobj.username)\n             return\n \n         # Send a mail notification\n         body = self.app.templates.compile_template(\n             \"access_token_added.html\", **{\"header_name\": self.app.cfg.header_name, 'user': userobj, 'name': name}\n         )\n         self.bus.publish('queue_mail', to=userobj.email, subject=_(\"A new access token has been created\"), message=body)"
+  },
+  {
+    "cve": "CVE-2023-4033",
+    "agent": "feedback",
+    "fix_patch": "--- a/mlflow/pyfunc/backend.py\n+++ b/mlflow/pyfunc/backend.py\n@@ -134,15 +134,15 @@ class PyFuncBackend(object):\n         \"\"\"\n         Generate predictions using generic python model saved with MLflow. The expected format of\n         the input JSON is the Mlflow scoring format.\n         Return the prediction results as a JSON.\n         \"\"\"\n         local_path = _download_artifact_from_uri(model_uri)\n         # NB: Absolute windows paths do not work with mlflow apis, use file uri to ensure\n         # platform compatibility.\n         local_uri = path_to_local_file_uri(local_path)\n\n         if self._env_manager != _EnvManager.LOCAL:\n             command = [\n                 'python',\n                 '-c', f'from mlflow.pyfunc.scoring_server import _predict; _predict(',\n                 f'model_uri=\"{local_uri}\", ',\n                 f'input_path=\"{input_path}\", ',\n                 f'output_path=\"{output_path}\", ',\n                 f'content_type=\"{content_type}\"'\n             ]\n             return self.prepare_env(local_path).execute(command)\n         else:\n             scoring_server._predict(local_uri, input_path, output_path, content_type)"
+  },
+  {
+    "cve": "CVE-2022-33146",
+    "agent": "feedback",
+    "fix_patch": "--- a/applications/admin/controllers/default.py\n+++ b/applications/admin/controllers/default.py\n@@ -118,7 +118,7 @@ def index():\n     \"\"\" Index handler \"\"\"\n \n     send = request.vars.send\n-    if DEMO_MODE:\n+    if DEMO_MODE and not is_safe_url(send):\n         session.authorized = True\n         session.last_time = t0\n     if not send:\n@@ -155,6 +155,9 @@ def index():\n             session.last_time = t0\n             if isinstance(send, list):  # ## why does this happen?\n                 send = str(send[0])\n+\n+            if is_safe_url(send):\n+                redirect(send)\n         else:\n             times_denied = login_record(False)\n             if times_denied >= allowed_number_of_attempts:\n@@ -164,6 +167,9 @@ def index():\n                 response.flash = \\\n                     T('You have one more login attempt before you are locked out')\n             else:\n+                if is_safe_url(send):\n+                    redirect(send)\n                 response.flash = T('invalid password.')\n     return dict(send=send)\n \n+def is_safe_url(url):\n+    return url.startswith(URL('site'))"
+  },
+  {
+    "cve": "CVE-2017-5537",
+    "agent": "feedback",
+    "fix_patch": "--- a/weblate/accounts/views.py\n+++ b/weblate/accounts/views.py\n@@ -560,7 +560,7 @@ def reset_password(request):\n                 request.session.create()\n             if request.user.is_authenticated():\n                 logout(request)\n \n             request.session['password_reset'] = True\n             return complete(request, 'email')\n     else:\n         form = ResetForm()\n \n     return render(\n         request,\n         'accounts/reset.html',\n         {\n             'title': _('Password reset'),\n             'form': form,\n         }\n     )"
+  },
+  {
+    "cve": "CVE-2018-8097",
+    "agent": "feedback",
+    "fix_patch": "--- a/eve/io/mongo/parser.py\n+++ b/eve/io/mongo/parser.py\n@@ -120,15 +120,15 @@\n         \"\"\" A couple function calls are supported: bson's ObjectId() and\n         datetime().\n         \"\"\"\n         if isinstance(node.func, ast.Name):\n             expr = None\n             if node.func.id == 'ObjectId':\n                 expr = \"('\" + node.args[0].s + \"')\"\n             elif node.func.id == 'datetime':\n                 values = []\n                 for arg in node.args:\n                     values.append(str(arg.n))\n                 expr = \"(\" + \", \".join(values) + \")\"\n-            if expr:\n+            if expr and node.func.id in ['ObjectId', 'datetime']:\n                 self.current_value = eval(node.func.id + expr)"
+  },
+  {
+    "cve": "CVE-2017-15111",
+    "agent": "feedback",
+    "fix_patch": "--- a/keycloak_httpd_client/keycloak_cli.py\n+++ b/keycloak_httpd_client/keycloak_cli.py\n@@ -846,7 +846,7 @@ def main():\n     parser.add_argument('--log-file',\n                         default='/tmp/{prog_name}.log'.format(\n                             prog_name=prog_name),\n-                        help='log file pathname')\n+                        help='log file pathname (must be absolute path)')\n \n     parser.add_argument('--permit-insecure-transport',  action='store_true',\n                         help='Normally secure transport such as TLS '"
+  },
+  {
+    "cve": "CVE-2023-50423",
+    "agent": "feedback",
+    "fix_patch": "--- a/sap/xssec/security_context_ias.py\n+++ b/sap/xssec/security_context_ias.py\n@@ -61,7 +61,7 @@\n         \"\"\"\n         check `aud` in jwt token\n         \"\"\"\n-        validation_result = self.audience_validator.validate_token(audiences_from_token=self.token_payload[\"aud\"])\n+        validation_result = self.audience_validator.validate_token(audiences_from_token=self.token_payload.get(\"aud\"))\n         if validation_result is False:\n             raise RuntimeError('Audience Validation Failed')\n         return self"
+  },
+  {
+    "cve": "CVE-2023-45809",
+    "agent": "feedback",
+    "fix_patch": "--- a/wagtail/users/views/bulk_actions/user_bulk_action.py\n+++ b/wagtail/users/views/bulk_actions/user_bulk_action.py\n@@ -6,7 +6,7 @@\n class UserBulkAction(BulkAction):\n     models = [get_user_model()]\n \n-    def get_queryset(self):\n+    def get_queryset(self):\n         return super().get_queryset().only('id')\n \n     def action(self, items):"
+  },
+  {
+    "cve": "CVE-2023-51449",
+    "agent": "feedback",
+    "fix_patch": "--- a/gradio/routes.py\n+++ b/gradio/routes.py\n@@ -434,7 +434,7 @@ async def file(path_or_url: str, request: fastapi.Request):\n             abs_path = utils.abspath(path_or_url)\n \n             in_blocklist = any(\n-                utils.is_in_or_equal(abs_path, blocked_path)\n+                utils.is_in_or_equal(os.path.normpath(abs_path), blocked_path)\n                 for blocked_path in blocks.blocked_paths\n             )\n             is_dir = abs_path.is_dir()"
+  },
+  {
+    "cve": "CVE-2020-5390",
+    "agent": "feedback",
+    "fix_patch": "--- a/src/saml2/sigver.py\n+++ b/src/saml2/sigver.py\n@@ -1438,6 +1438,7 @@ def _check_signature(self, decoded_xml, item, node_name=NODE_NAME, origdoc=None, id_\n                 if isinstance(cert, six.string_types):\n                     content = pem_format(cert)\n                     tmp = make_temp(content,\n+                                    suffix=\".pem\",\n                                     decode=False,\n                                     delete_tmpfiles=self.delete_tmpfiles)\n                     certs.append(tmp)"
+  },
+  {
+    "cve": "CVE-2023-22452",
+    "agent": "feedback",
+    "fix_patch": "--- a/kenny2automate/server/__init__.py\n+++ b/kenny2automate/server/__init__.py\n@@ -568,6 +568,10 @@ async def save_server(self, request):\n                 continue\n             param = {'channel_id': int(k[len('channel-'):])}\n             for v in data.getall(k):\n+                if not guild.get_channel(param['channel_id']):\n+                    self.notfound()\n+                \n                 v = v.partition('=')\n                 if v[0] == 'ping':\n                     if 'ping' not in param:"
+  },
+  {
+    "cve": "CVE-2019-14904",
+    "agent": "feedback",
+    "fix_patch": "--- a/lib/ansible/modules/system/solaris_zone.py\n+++ b/lib/ansible/modules/system/solaris_zone.py\n@@ -160,7 +160,7 @@ class SolarisZoneModule(object):\n         self.zoneadm_cmd = self.module.get_bin_path('zoneadm', True)\n         self.zonecfg_cmd = self.module.get_bin_path('zonecfg', True)\n         self.ssh_keygen_cmd = self.module.get_bin_path('ssh-keygen', True)\n-\n+        self.name = self.module.params['name'].replace(\"'\", \"\").replace('\"', \"\")\n \n         if self.module.check_mode:\n             self.msg.append('Running in check mode')"
+  },
+  {
+    "cve": "CVE-2022-28346",
+    "agent": "feedback",
+    "fix_patch": "--- a/django/db/models/sql/query.py\n+++ b/django/db/models/sql/query.py\n@@ -1037,7 +1037,7 @@ def add_annotation(self, annotation, alias, is_summary=False, select=True):\n         \"\"\"Add a single annotation expression to the Query.\"\"\"\n         annotation = annotation.resolve_expression(self, allow_joins=True, reuse=None,\n                                                    summarize=is_summary)\n-        if select:\n+        if select and isinstance(alias, str):\n             self.append_annotation_mask([alias])\n         else:\n             self.set_annotation_mask(set(self.annotation_select).difference({alias}))"
+  },
+  {
+    "cve": "CVE-2024-27081",
+    "agent": "feedback",
+    "fix_patch": "--- a/esphome/dashboard/web_server.py\n+++ b/esphome/dashboard/web_server.py\n@@ -807,7 +807,7 @@ async def get(self, configuration: str | None = None) -> None:\n         \"\"\"Get the content of a file.\"\"\"\n         loop = asyncio.get_running_loop()\n         filename = settings.rel_path(configuration)\n-        content = await loop.run_in_executor(None, self._read_file, filename, configuration)\n+        content = await loop.run_in_executor(None, self._read_file, os.path.join(settings.config_dir, filename), configuration)\n         if content is not None:\n             self.write(content)"
+  },
+  {
+    "cve": "CVE-2021-33880",
+    "agent": "feedback",
+    "fix_patch": "--- a/src/websockets/legacy/auth.py\n+++ b/src/websockets/legacy/auth.py\n@@ -100,7 +100,7 @@ def basic_auth_protocol_factory(\n     if credentials is not None:\n         if is_credentials(credentials):\n \n-            async def check_credentials(username: str, password: str) -> bool:\n+            async def check_credentials(username: str, password: str) -> bool:\n                 return (username, password) == credentials\n \n         elif isinstance(credentials, Iterable):"
+  },
+  {
+    "cve": "CVE-2024-12704",
+    "agent": "feedback",
+    "fix_patch": "--- a/llama-index-core/llama_index/core/langchain_helpers/streaming.py\n+++ b/llama-index-core/llama_index/core/langchain_helpers/streaming.py\n@@ -38,6 +38,7 @@\n     def get_response_gen(self) -> Generator:\n         while True:\n             if not self._token_queue.empty():\n+                try:\n                 token = self._token_queue.get_nowait()\n                 yield token\n             elif self._done.is_set():\n                 break\n+            except Exception as e:\n+                print(f\"Exception occurred: {e}\")"
+  },
+  {
+    "cve": "CVE-2022-4768",
+    "agent": "feedback",
+    "fix_patch": "--- a/grouper/public_key.py\n+++ b/grouper/public_key.py\n@@ -99,7 +99,7 @@ def add_public_key(session, user, public_key_str):\n             Counter.incr(session, \"updates\")\n         except IntegrityError:\n             session.rollback()\n-            raise DuplicateKey()\n+            raise DuplicateKey(\"Public key already exists.\")\n \n     session.commit()\n \n     return db_pubkey"
+  },
+  {
+    "cve": "CVE-2015-10056",
+    "agent": "feedback",
+    "fix_patch": "--- a/recordstoreapp/views.py\n+++ b/recordstoreapp/views.py\n@@ -25,7 +25,7 @@ def search(request):\n     context_dict = {}\n     if 'q' in request.GET and request.GET['q'] != '':\n         q = request.GET['q']\n-        cursor.execute(\"SELECT id,title,artist,cover FROM recordstoreapp_record WHERE title like '%\" + q + \"%' or artist like '%\" + q + \"%' or label like '%\" + q + \"%' or cat_no like '%\" + q + \"%';\")\n+        cursor.execute(\"SELECT id,title,artist,cover FROM recordstoreapp_record WHERE title LIKE %s OR artist LIKE %s OR label LIKE %s OR cat_no LIKE %s\", (q, q, q, q))\n         rec_list = cursor.fetchall()\n         \n         total = len(rec_list)"
+  }
+]
